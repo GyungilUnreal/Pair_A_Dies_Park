@@ -8,6 +8,8 @@
 
 class UAbilitySystemComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityConsumed, AActor*, TargetActor);
+
 UENUM(BlueprintType)
 enum class EGrantTrigger : uint8
 {
@@ -88,6 +90,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "GAS")
     void AttachItemToSocket(AActor* TargetActor, const FName SocketName);
+
+    UPROPERTY(BlueprintAssignable, Category = "GAS")
+    FOnAbilityConsumed OnAbilityConsumed;
 
 protected:
     // Target마다 Handle을 기억해야 나중에 뺄 수 있음
