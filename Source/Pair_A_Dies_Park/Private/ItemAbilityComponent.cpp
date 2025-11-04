@@ -103,13 +103,34 @@ void UItemAbilityComponent::NotifyAbilityConsumed(AActor* TargetActor)
 
     if (*ChargesPtr <= 0)
     {
-        // 다 썼으니 제거
-        RemoveFromActor(TargetActor);
-
-        // 필요하면 아이템 액터 자체도 없애기
         if (AActor* OwnerActor = GetOwner())
         {
-            OwnerActor->Destroy();
+            // 블루프린트에서 바인딩한 애들 호출
+            OnAbilityConsumed.Broadcast(TargetActor);
+
+            // 일단 안 보이게 하고, 충돌도 끔
+            OwnerActor->SetActorHiddenInGame(true);
+            OwnerActor->SetActorEnableCollision(false);
+            OwnerActor->SetActorTickEnabled(false);
+
+            // 3초 후에 어빌리티 회수 및 삭제
+            FTimerHandle DestroyTimerHandle;
+            OwnerActor->GetWorldTimerManager().SetTimer(
+                DestroyTimerHandle,
+                [this, TargetActor, OwnerActor]()
+                {
+                    // 어빌리티 회수
+                    RemoveFromActor(TargetActor);
+
+                    // 액터 유효하면 삭제
+                    if (IsValid(OwnerActor))
+                    {
+                        OwnerActor->Destroy();
+                    }
+                },
+                3.0f,  // 지연 시간 (3초)
+                false  // 반복 안 함
+            );
         }
     }
 }
