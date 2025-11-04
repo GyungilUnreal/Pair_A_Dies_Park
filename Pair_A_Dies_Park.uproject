@@ -22,11 +22,8 @@
 			]
 		},
 		{
-<<<<<<< HEAD
 			"Name": "GameplayAbilities",
-=======
-			"Name": "Cargo",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "Water",
@@ -34,7 +31,6 @@
 		},
 		{
 			"Name": "WaterExtras",
->>>>>>> feat/Puzzle
 			"Enabled": true
 		}
 	]
