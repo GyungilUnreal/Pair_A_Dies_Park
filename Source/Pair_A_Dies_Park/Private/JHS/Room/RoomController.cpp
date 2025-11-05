@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "RoomController.h"
+#include "JHS/Room/RoomController.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyGameInstance.h"
-#include "RoomManager.h"
-#include "PuzzleBase.h"
-#include "MyGameMode.h"
+#include "JHS/GameControll/MyGameInstance.h"
+#include "JHS/Room/RoomManager.h"
+#include "JHS/Puzzle/PuzzleBase.h"
+#include "JHS/GameControll/MyGameMode.h"
 
 // Sets default values
 ARoomController::ARoomController()

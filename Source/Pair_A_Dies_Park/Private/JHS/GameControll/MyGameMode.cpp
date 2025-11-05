@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MyGameMode.h"
+#include "JHS/GameControll/MyGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "MyGameInstance.h"
-#include "RoomManager.h"
+#include "JHS/Room/RoomManager.h"
 
 AMyGameMode::AMyGameMode()
 {

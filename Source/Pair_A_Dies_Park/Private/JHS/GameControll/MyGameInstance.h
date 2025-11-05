@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "RoomDataTable.h"
+#include "JHS/Room/RoomDataTable.h"
 
 #include "MyGameInstance.generated.h"
 

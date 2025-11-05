@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "PuzzleBase.h"
-#include "RoomController.h"
+#include "JHS/Puzzle/PuzzleBase.h"
+#include "JHS/Room/RoomController.h"
 
 // Sets default values
 APuzzleBase::APuzzleBase()

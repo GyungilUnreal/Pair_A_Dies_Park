@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MyGameInstance.h"
-#include "RoomDataTable.h"
+#include "JHS/GameControll/MyGameInstance.h"
+#include "JHS/Room/RoomDataTable.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyGameMode.h"
-#include "RoomManager.h"
+#include "JHS/GameControll/MyGameMode.h"
+#include "JHS/Room/RoomManager.h"
 
 UMyGameInstance::UMyGameInstance()
 {
