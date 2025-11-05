@@ -5,14 +5,14 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Engine/DataTable.h"
-#include "RoomDataTable.h"
 
 #include "RoomManager.generated.h"
 
 UENUM(BlueprintType)
 enum class E_ROOM_TYPE : uint8
 {
-	Metro = 0 UMETA(DisplayName = "Metro"),
+	Tutorial = 0 UMETA(DisplayName = "Tutorial"),
+	Metro UMETA(DisplayName = "Metro"),
 	Volcanic UMETA(DisplayName = "Volcanic"),
 	Dungeon UMETA(DisplayName = "Dungeon"),
 
@@ -27,14 +27,6 @@ class URoomManager : public UActorComponent
 public:
 	// Sets default values for this component's properties
 	URoomManager();
-	
-private:
-	const FString _roomDataTablePath = TEXT("/Game/Collaborators/JHS/Resource/Data/RoomTable.RoomTable");
-	
-	const FString _roomLevelFolderPath = TEXT("Game/Collaborators/JHS/Map/");
-
-	UPROPERTY()
-	TObjectPtr<class UMyGameInstance> _gameInstance = nullptr;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Room Manager|Room")
@@ -51,13 +43,10 @@ public:
 private:
 	void InitializeRoomManager();
 
-	bool LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray);
-
+public:
 	TArray<int32> CreateRandomRoom();
 
-public:
 	void OnCompletedRoom(int32 CompletedRommSequence);
 
-	UFUNCTION(BlueprintCallable, Category = "Room Manager")
-	void LoadLevel(int32 NextRoomSequence);
+	void LoadLevel(struct FRoomData RoomData);
 };

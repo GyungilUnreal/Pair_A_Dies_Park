@@ -27,4 +27,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GameMode|Start Game")
 	void StartGame(bool IsTutorial = false);
+
+	void OnGameEnd();
 };
