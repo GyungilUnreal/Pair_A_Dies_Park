@@ -27,7 +27,7 @@ void AMyGameMode::StartGame(bool IsTutorial)
     _gameInstance->RegistRoomSequence(_roomManager->CreateRandomRoom());
 
     // 튜토리얼 여부에 따라 시작 방 인덱스 결정
-    _gameInstance->ChangeRoomSequence(IsTutorial ? -1 : 0);
+    _gameInstance->ChangeRoomSequence(IsTutorial ? -2 : -1);
 }
 
 void AMyGameMode::OnGameEnd()

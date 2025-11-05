@@ -16,7 +16,8 @@ class AMyGameMode : public AGameMode
 public:
 	AMyGameMode();
 
-private:
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Mode|Room Manager")
 	TObjectPtr<URoomManager> _roomManager;
 
 protected:
@@ -25,7 +26,7 @@ protected:
 public:
 	TObjectPtr<URoomManager> GetRoomManager() const { return _roomManager; }
 
-	UFUNCTION(BlueprintCallable, Category = "GameMode|Start Game")
+	UFUNCTION(BlueprintCallable, Category = "Game Mode|Start Game")
 	void StartGame(bool IsTutorial = false);
 
 	void OnGameEnd();

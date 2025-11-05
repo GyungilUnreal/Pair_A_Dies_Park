@@ -30,6 +30,9 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Room Manager|Room")
+	bool _isDebugRoom = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Room Manager|Room")
 	int32 _maxRoomCount = 3;
 
 protected:

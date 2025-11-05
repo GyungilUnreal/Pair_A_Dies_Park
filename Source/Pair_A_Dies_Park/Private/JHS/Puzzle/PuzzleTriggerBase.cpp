@@ -35,5 +35,6 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> P
 
 void APuzzleTriggerBase::OnTrigger()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Triggered %s"), *GetName());
 	_puzzle->OnChangeTriggerState(this, true);
 }

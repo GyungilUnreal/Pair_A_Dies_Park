@@ -80,14 +80,14 @@ void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 	}
 
 	// 튜토리얼 레벨 시작
-	if (CompletedRoomSequence <= -1)
+	if (CompletedRoomSequence <= -2)
 	{
-		_currentRoomSequence = -1;
+		_currentRoomSequence = -2;
 	}
 	// 일반 레벨 시작
-	else if (CompletedRoomSequence == 0)
+	else if (CompletedRoomSequence == -1)
 	{
-		_currentRoomSequence = 0;
+		_currentRoomSequence = -1;
 	}
 	else
 	{
@@ -96,20 +96,21 @@ void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 			UE_LOG(LogTemp, Error, TEXT("Completed sequence [%d] is not current sequence"), CompletedRoomSequence);
 			return;
 		}
-
-		_currentRoomSequence++;
-		if (_currentRoomSequence == _roomSequenceArray.Num())
-		{
-			UE_LOG(LogTemp, Error, TEXT("Completed all sequence"));
-
-			_gameMode->OnGameEnd();
-		}
 	}
 
-	UE_LOG(LogTemp, Error, TEXT("Next sequence is [%d]"), _currentRoomSequence);
+	_currentRoomSequence++;
+	if (_currentRoomSequence == _roomSequenceArray.Num())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Completed all sequence"));
+
+		_gameMode->OnGameEnd();
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Next sequence is [%d]"), _currentRoomSequence);
 
 	TObjectPtr<URoomManager> _roomManager = _gameMode->GetRoomManager();
-	if (_roomManager)
+	if (!_roomManager)
 	{
 		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
 		return;

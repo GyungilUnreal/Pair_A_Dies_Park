@@ -57,7 +57,7 @@ void APuzzleBase::OnChangeTriggerState(TObjectPtr<APuzzleTriggerBase> PuzzleTrig
 	
 	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleTriggerArray)
 	{
-		if (!_puzzleTriggerMap.Contains(_puzzleTrigger))
+		if (!_puzzleTriggerMap.Contains(_puzzleTrigger) || !_puzzleTriggerMap.FindRef(_puzzleTrigger))
 			return;
 	}
 

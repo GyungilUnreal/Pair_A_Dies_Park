@@ -35,6 +35,14 @@ void URoomManager::InitializeRoomManager()
 
 TArray<int32> URoomManager::CreateRandomRoom()
 {
+	// 테스트 룸 1개
+	if (_isDebugRoom)
+	{
+		TArray<int32> _debugRoomArray;
+		_debugRoomArray.Add(0);
+		return _debugRoomArray;
+	}
+
 	// 모든 방 타입 배열 생성
 	TArray<int32> _originRoomTypeArray;
 	for (int32 i = 0; i < static_cast<int32>(E_ROOM_TYPE::SIZE); i++)
@@ -68,7 +76,7 @@ TArray<int32> URoomManager::CreateRandomRoom()
 void URoomManager::OnCompletedRoom(int32 CompletedRommSequence)
 {
 	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (_gameInstance)
+	if (!_gameInstance)
 	{
 		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
 		return;

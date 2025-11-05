@@ -41,14 +41,14 @@ void ARoomController::InitializeRoomController()
 	}
 
 	_roomManager = _gameMode->GetRoomManager();
-	if (_roomManager)
+	if (!_roomManager)
 	{
 		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
 		return;
 	}
 
 	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (_gameInstance)
+	if (!_gameInstance)
 	{
 		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
 		return;
