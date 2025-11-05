@@ -15,6 +15,13 @@ public:
 	// Sets default values for this actor's properties
 	APuzzleTriggerBase();
 
+private:
+	TObjectPtr<class APuzzleBase> _puzzle = nullptr;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Delay")
+	float _triggerDelay = 1.0f;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -23,4 +30,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+public:
+	void InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> Puzzle);
+
+private:
+	void OnTrigger();
 };

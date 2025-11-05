@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "PuzzleBase.generated.h"
 
+class APuzzleTriggerBase;
+class APuzzleActionBase;
+
 UCLASS()
 class APuzzleBase : public AActor
 {
@@ -22,9 +25,19 @@ private:
 
 	bool _isCompleted = false;
 
+#pragma region Puzzle Trigger
+	TMap<TObjectPtr<APuzzleTriggerBase>, bool> _puzzleTriggerMap = TMap<TObjectPtr<APuzzleTriggerBase>, bool>();
+#pragma endregion Puzzle Trigger
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle|Delay")
 	float _completeDelay = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle|Trigger")
+	TArray<TObjectPtr<APuzzleTriggerBase>> _puzzleTriggerArray = TArray<TObjectPtr<APuzzleTriggerBase>>();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle|Action")
+	TArray<TObjectPtr<APuzzleActionBase>> _puzzleActionArray = TArray<TObjectPtr<APuzzleActionBase>>();
 
 protected:
 	// Called when the game starts or when spawned
@@ -35,10 +48,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	void InitializePuzzle(TObjectPtr<class ARoomController> RoomController, int32 PuzzleIndex);
+	void InitializePuzzle(TObjectPtr<ARoomController> RoomController);
+
+	void OnChangeTriggerState(TObjectPtr<APuzzleTriggerBase> PuzzleTrigger, bool IsTriggered);
 
 	bool IsCompletedPuzzle() { return _isCompleted; }
-
-private:
-	void CompletePuzzle();
 };

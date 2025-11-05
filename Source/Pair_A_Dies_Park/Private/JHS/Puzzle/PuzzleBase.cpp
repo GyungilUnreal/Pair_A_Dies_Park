@@ -3,6 +3,8 @@
 
 #include "JHS/Puzzle/PuzzleBase.h"
 #include "JHS/Room/RoomController.h"
+#include "JHS/Puzzle/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/PuzzleActionBase.h"
 
 // Sets default values
 APuzzleBase::APuzzleBase()
@@ -16,9 +18,6 @@ APuzzleBase::APuzzleBase()
 void APuzzleBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APuzzleBase::CompletePuzzle, _completeDelay);
 }
 
 // Called every frame
@@ -28,16 +27,45 @@ void APuzzleBase::Tick(float DeltaTime)
 
 }
 
-void APuzzleBase::InitializePuzzle(TObjectPtr<ARoomController> RoomController, int32 PuzzleIndex)
+void APuzzleBase::InitializePuzzle(TObjectPtr<ARoomController> RoomController)
 {
 	_roomController = RoomController;
-	_puzzleIndex = PuzzleIndex;
 	_isCompleted = false;
+
+	// Initialize Puzzle Trigger
+	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleTriggerArray)
+	{
+		_puzzleTriggerMap.Add(_puzzleTrigger, false);
+		_puzzleTrigger->InitializePuzzleTrigger(this);
+	}
+
+	// Initialize Puzzle Action
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleActionArray)
+	{
+		_puzzleAction->InitializePuzzleAction();
+	}
 }
 
-void APuzzleBase::CompletePuzzle()
+void APuzzleBase::OnChangeTriggerState(TObjectPtr<APuzzleTriggerBase> PuzzleTrigger, bool IsTriggered)
 {
+	// Unity c#�� Dictionay.TryGet(Key, out Value)
+	auto _found = _puzzleTriggerMap.Find(PuzzleTrigger);
+	if (_found != nullptr)
+	{
+		*_found = IsTriggered;
+	}
+	
+	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleTriggerArray)
+	{
+		if (!_puzzleTriggerMap.Contains(_puzzleTrigger))
+			return;
+	}
+
 	_isCompleted = true;
-	UE_LOG(LogTemp, Warning, TEXT("%f"), _completeDelay);
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleActionArray)
+	{
+		_puzzleAction->ExecutePuzzleAction();
+	}
+	
 	_roomController->OnCompletePuzzle(_puzzleIndex);
 }

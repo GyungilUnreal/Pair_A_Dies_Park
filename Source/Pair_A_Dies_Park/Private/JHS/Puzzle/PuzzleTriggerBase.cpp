@@ -2,6 +2,7 @@
 
 
 #include "JHS/Puzzle/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/PuzzleBase.h"
 
 // Sets default values
 APuzzleTriggerBase::APuzzleTriggerBase()
@@ -15,7 +16,6 @@ APuzzleTriggerBase::APuzzleTriggerBase()
 void APuzzleTriggerBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -25,3 +25,15 @@ void APuzzleTriggerBase::Tick(float DeltaTime)
 
 }
 
+void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> Puzzle)
+{
+	_puzzle = Puzzle;
+
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APuzzleTriggerBase::OnTrigger, _triggerDelay);
+}
+
+void APuzzleTriggerBase::OnTrigger()
+{
+	_puzzle->OnChangeTriggerState(this, true);
+}

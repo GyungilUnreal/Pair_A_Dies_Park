@@ -16,6 +16,10 @@ public:
 	APuzzleActionBase();
 
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Index")
+	int32 _actionIndex = -1;
+
+protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -23,4 +27,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+public:
+	void InitializePuzzleAction();
+
+	void ExecutePuzzleAction();
 };

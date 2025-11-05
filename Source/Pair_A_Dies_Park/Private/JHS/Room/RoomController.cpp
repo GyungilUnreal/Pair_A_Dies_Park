@@ -3,10 +3,10 @@
 
 #include "JHS/Room/RoomController.h"
 #include "Kismet/GameplayStatics.h"
+#include "JHS/GameControll/MyGameMode.h"
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomManager.h"
 #include "JHS/Puzzle/PuzzleBase.h"
-#include "JHS/GameControll/MyGameMode.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -60,7 +60,7 @@ void ARoomController::InitializeRoomController()
 	_puzzleArray = SearchPuzzle();
 	for (int32 i = 0; i < _puzzleArray.Num(); i++)
 	{
-		_puzzleArray[i]->InitializePuzzle(this, i);
+		_puzzleArray[i]->InitializePuzzle(this);
 	}
 }
 

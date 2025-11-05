@@ -24,3 +24,12 @@ void APuzzleActionBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
+void APuzzleActionBase::InitializePuzzleAction()
+{
+}
+
+void APuzzleActionBase::ExecutePuzzleAction()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Action %d"), _actionIndex);
+}
