@@ -29,10 +29,6 @@ public:
 	URoomManager();
 	
 private:
-	const FString _roomDataTablePath = TEXT("/Game/Collaborators/JHS/Resource/Data/RoomTable.RoomTable");
-	
-	const FString _roomLevelFolderPath = TEXT("Game/Collaborators/JHS/Map/");
-
 	UPROPERTY()
 	TObjectPtr<class UMyGameInstance> _gameInstance = nullptr;
 
@@ -51,11 +47,9 @@ public:
 private:
 	void InitializeRoomManager();
 
-	bool LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray);
-
+public:
 	TArray<int32> CreateRandomRoom();
 
-public:
 	void OnCompletedRoom(int32 CompletedRommSequence);
 
 	UFUNCTION(BlueprintCallable, Category = "Room Manager")

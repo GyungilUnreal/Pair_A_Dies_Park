@@ -17,6 +17,8 @@ public:
 	ARoomController();
 
 private:
+	TObjectPtr<class URoomManager> _roomManager = nullptr;
+
 	TArray<TObjectPtr<class APuzzleBase>> _puzzleArray = TArray<TObjectPtr<class APuzzleBase>>();
 
 	int32 _roomSequence = -1;
@@ -29,22 +31,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-public:
-	void InitializeRoomController(int32 RoomSequence);
-
-	void OnCompletePuzzle(int32 completedPuzzleIndex);
-
 private:
+	void InitializeRoomController();
+
 	TArray<TObjectPtr<class APuzzleBase>> SearchPuzzle();
 
-	TObjectPtr<class URoomManager> GetRoomManager() const;
-
-
-
-	// Debug
-protected:
-	UFUNCTION(BlueprintCallable)
-	void StartSecondRoom();
-
-	void StartNextRoom();
+public:
+	void OnCompletePuzzle(int32 completedPuzzleIndex);
 };

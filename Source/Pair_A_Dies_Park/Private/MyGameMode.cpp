@@ -2,6 +2,8 @@
 
 
 #include "MyGameMode.h"
+#include "Kismet/GameplayStatics.h"
+#include "MyGameInstance.h"
 #include "RoomManager.h"
 
 AMyGameMode::AMyGameMode()
@@ -21,6 +23,9 @@ void AMyGameMode::BeginPlay()
 
 void AMyGameMode::StartGame(bool IsTutorial)
 {
+    TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+    _gameInstance->RegistRoomSequence(_roomManager->CreateRandomRoom());
+
     // 튜토리얼 여부에 따라 시작 방 인덱스 결정
     int32 NextRoomIndex = IsTutorial ? -1 : 0;
 
@@ -37,4 +42,9 @@ void AMyGameMode::StartGame(bool IsTutorial)
             UE_LOG(LogTemp, Error, TEXT("RoomManager is null in StartGame timer callback"));
         }
     }), 3.0f, false);
+}
+
+void AMyGameMode::OnGameEnd()
+{
+
 }

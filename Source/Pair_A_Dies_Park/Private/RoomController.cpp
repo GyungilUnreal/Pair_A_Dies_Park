@@ -2,9 +2,9 @@
 
 
 #include "RoomController.h"
+#include "Kismet/GameplayStatics.h"
 #include "MyGameInstance.h"
 #include "RoomManager.h"
-#include "Kismet/GameplayStatics.h"
 #include "PuzzleBase.h"
 #include "MyGameMode.h"
 
@@ -20,6 +20,8 @@ ARoomController::ARoomController()
 void ARoomController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InitializeRoomController();
 }
 
 // Called every frame
@@ -29,9 +31,30 @@ void ARoomController::Tick(float DeltaTime)
 
 }
 
-void ARoomController::InitializeRoomController(int32 RoomSequence)
+void ARoomController::InitializeRoomController()
 {
-	_roomSequence = RoomSequence;
+	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!_gameMode)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
+		return;
+	}
+
+	_roomManager = _gameMode->GetRoomManager();
+	if (_roomManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
+		return;
+	}
+
+	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (_gameInstance)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
+		return;
+	}
+
+	_roomSequence = _gameInstance->GetCurrentRoomSequence();
 	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
 
 	_puzzleArray = SearchPuzzle();
@@ -41,17 +64,6 @@ void ARoomController::InitializeRoomController(int32 RoomSequence)
 	}
 }
 
-void ARoomController::OnCompletePuzzle(int32 completedPuzzleIndex)
-{
-	for (int32 i = 0; i < _puzzleArray.Num(); i++)
-	{
-		if (!_puzzleArray[i]->IsCompletedPuzzle())
-			return;
-	}
-
-	GetRoomManager()->OnCompletedRoom(_roomSequence);
-}
-
 TArray<TObjectPtr<class APuzzleBase>> ARoomController::SearchPuzzle()
 {
 	TArray<TObjectPtr<class APuzzleBase>> _resultPuzzleArray = TArray<TObjectPtr<class APuzzleBase>>();
@@ -59,7 +71,7 @@ TArray<TObjectPtr<class APuzzleBase>> ARoomController::SearchPuzzle()
 	// 월드에서 모든 APuzzleBase 액터 가져오기
 	TArray<AActor*> _foundActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APuzzleBase::StaticClass(), _foundActors);
-	
+
 	// 범위 내에 있는 퍼즐만 필터링
 	for (AActor* _actor : _foundActors)
 	{
@@ -73,28 +85,13 @@ TArray<TObjectPtr<class APuzzleBase>> ARoomController::SearchPuzzle()
 	return _resultPuzzleArray;
 }
 
-TObjectPtr<URoomManager> ARoomController::GetRoomManager() const
+void ARoomController::OnCompletePuzzle(int32 completedPuzzleIndex)
 {
-	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!_gameMode)
+	for (int32 i = 0; i < _puzzleArray.Num(); i++)
 	{
-		UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
-		return nullptr;
+		if (!_puzzleArray[i]->IsCompletedPuzzle())
+			return;
 	}
 
-	TObjectPtr<URoomManager> _roomManager = _gameMode->GetRoomManager();
-	if (_roomManager == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
-		return nullptr;
-	}
-
-	return _roomManager;
-}
-
-// Debug
-void ARoomController::StartSecondRoom()
-{
-	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	InitializeRoomController(_gameInstance->GetCurrentRoomSequence());
+	_roomManager->OnCompletedRoom(_roomSequence);
 }

@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "MyGameInstance.generated.h"
+#include "RoomDataTable.h"
 
-struct FRoomData;
+#include "MyGameInstance.generated.h"
 
 UCLASS()
 class UMyGameInstance : public UGameInstance
@@ -17,8 +17,14 @@ public:
 	UMyGameInstance();
 
 private:
+#pragma region Room Data Table
+	const FString _roomDataTablePath = TEXT("/Game/Collaborators/JHS/Resource/Data/RoomTable.RoomTable");
+
+	const FString _roomLevelFolderPath = TEXT("Game/Collaborators/JHS/Map/");
+
 	UPROPERTY()
 	TArray<FRoomData> _roomDataArray;
+#pragma endregion Room Data Table
 
 	UPROPERTY()
 	TArray<int32> _roomSequenceArray;
@@ -27,12 +33,12 @@ private:
 	int32 _currentRoomSequence = -1;
 
 public:
-	const TArray<FRoomData>& GetRoomDataArray() const { return _roomDataArray; }
+	virtual void Init() override;
 
-	void RegistRoomData(const TArray<FRoomData>& RoomDataArray);
+private:
+	bool LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray);
 
-	const TArray<int32>& GetRoomSequence() const { return _roomSequenceArray; }
-
+public:
 	void RegistRoomSequence(const TArray<int32>& RoomSequenceArray);
 
 	int32 GetCurrentRoomSequence() const { return _currentRoomSequence; }
