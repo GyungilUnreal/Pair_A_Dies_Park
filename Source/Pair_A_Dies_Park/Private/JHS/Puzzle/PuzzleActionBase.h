@@ -30,5 +30,5 @@ public:
 public:
 	void InitializePuzzleAction();
 
-	void ExecutePuzzleAction();
+	virtual void ExecutePuzzleAction();
 };

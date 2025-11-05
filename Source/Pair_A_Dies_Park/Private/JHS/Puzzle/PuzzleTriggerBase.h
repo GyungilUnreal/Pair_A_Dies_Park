@@ -33,6 +33,6 @@ public:
 public:
 	void InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> Puzzle);
 
-private:
+protected:
 	void OnTrigger();
 };

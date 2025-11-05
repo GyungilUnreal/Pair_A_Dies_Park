@@ -39,6 +39,12 @@ void APuzzleBase::InitializePuzzle(TObjectPtr<ARoomController> RoomController)
 		_puzzleTrigger->InitializePuzzleTrigger(this);
 	}
 
+	if (_puzzleTriggerMap.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Puzzle trigger is not set"));
+		return;
+	}
+
 	// Initialize Puzzle Action
 	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleActionArray)
 	{
