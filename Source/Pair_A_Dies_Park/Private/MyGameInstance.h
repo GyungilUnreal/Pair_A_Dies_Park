@@ -41,9 +41,9 @@ private:
 public:
 	void RegistRoomSequence(const TArray<int32>& RoomSequenceArray);
 
-	int32 GetCurrentRoomSequence() const { return _currentRoomSequence; }
+	void ChangeRoomSequence(int32 CompletedRoomSequence);
 
-	void OnStartRoom(int32 CurrentRoomSequence) { _currentRoomSequence = CurrentRoomSequence; }
+	int32 GetCurrentRoomSequence() { return _currentRoomSequence; }
 
-	FRoomData GetNextRoomData(int32 CompletedRoomSequence);
+	FRoomData GetRoomData(int32 RoomIndex) { return _roomDataArray[RoomIndex]; }
 };

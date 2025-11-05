@@ -3,6 +3,9 @@
 
 #include "MyGameInstance.h"
 #include "RoomDataTable.h"
+#include "Kismet/GameplayStatics.h"
+#include "MyGameMode.h"
+#include "RoomManager.h"
 
 UMyGameInstance::UMyGameInstance()
 {
@@ -67,8 +70,53 @@ void UMyGameInstance::RegistRoomSequence(const TArray<int32>& RoomSequenceArray)
 	}
 }
 
-FRoomData UMyGameInstance::GetNextRoomData(int32 CompletedRoomSequence)
+void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 {
-	int32 _nextRoomSequence = _roomSequenceArray[CompletedRoomSequence];
-	return _roomDataArray[_nextRoomSequence];
+	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!_gameMode)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
+		return;
+	}
+
+	// 튜토리얼 레벨 시작
+	if (CompletedRoomSequence <= -1)
+	{
+		_currentRoomSequence = -1;
+	}
+	// 일반 레벨 시작
+	else if (CompletedRoomSequence == 0)
+	{
+		_currentRoomSequence = 0;
+	}
+	else
+	{
+		if (CompletedRoomSequence != _currentRoomSequence)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Completed sequence [%d] is not current sequence"), CompletedRoomSequence);
+			return;
+		}
+
+		_currentRoomSequence++;
+		if (_currentRoomSequence == _roomSequenceArray.Num())
+		{
+			UE_LOG(LogTemp, Error, TEXT("Completed all sequence"));
+
+			_gameMode->OnGameEnd();
+		}
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("Next sequence is [%d]"), _currentRoomSequence);
+
+	TObjectPtr<URoomManager> _roomManager = _gameMode->GetRoomManager();
+	if (_roomManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
+		return;
+	}
+
+	// 다음 시퀀스 룸 시작
+	int32 _nextRoomIndex = _roomSequenceArray[_currentRoomSequence];
+	FRoomData _nextRoomData = _roomDataArray[_nextRoomIndex];
+	_roomManager->LoadLevel(_nextRoomData);
 }

@@ -27,24 +27,10 @@ void AMyGameMode::StartGame(bool IsTutorial)
     _gameInstance->RegistRoomSequence(_roomManager->CreateRandomRoom());
 
     // 튜토리얼 여부에 따라 시작 방 인덱스 결정
-    int32 NextRoomIndex = IsTutorial ? -1 : 0;
-
-    // 3초 후에 레벨 로드
-    FTimerHandle TimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateLambda([this, NextRoomIndex]()
-    {
-        if (_roomManager)
-        {
-            _roomManager->LoadLevel(NextRoomIndex);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("RoomManager is null in StartGame timer callback"));
-        }
-    }), 3.0f, false);
+    _gameInstance->ChangeRoomSequence(IsTutorial ? -1 : 0);
 }
 
 void AMyGameMode::OnGameEnd()
 {
-
+    UE_LOG(LogTemp, Warning, TEXT("Game end"));
 }

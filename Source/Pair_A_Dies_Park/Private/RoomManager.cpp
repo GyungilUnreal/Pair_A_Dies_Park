@@ -19,8 +19,6 @@ URoomManager::URoomManager()
 void URoomManager::BeginPlay()
 {
 	Super::BeginPlay();
-
-	InitializeRoomManager();
 }
 
 // Called every frame
@@ -33,13 +31,6 @@ void URoomManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 
 void URoomManager::InitializeRoomManager()
 {
-	// 게임 인스턴스 가져오기
-	_gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (!_gameInstance)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to get game instance"));
-		return;
-	}
 }
 
 TArray<int32> URoomManager::CreateRandomRoom()
@@ -51,11 +42,11 @@ TArray<int32> URoomManager::CreateRandomRoom()
 		_originRoomTypeArray.Add(i);
 	}
 
-	// 결과 배열 초기화
-	TArray<int32> _resultRoomIndexArray;
-
 	// 랜덤 방 선택
-	for (int32 i = 0; i < _maxRoomCount; i++)
+	TArray<int32> _resultRoomIndexArray;
+	int32 _originRoomNum = _originRoomTypeArray.Num();
+	int32 _roomCount = _maxRoomCount <= _originRoomNum ? _maxRoomCount : _originRoomNum;
+	for (int32 i = 0; i < _roomCount; i++)
 	{
 		// 남은 방 중에서 랜덤 선택
 		if (_originRoomTypeArray.Num() <= 0)
@@ -76,30 +67,19 @@ TArray<int32> URoomManager::CreateRandomRoom()
 
 void URoomManager::OnCompletedRoom(int32 CompletedRommSequence)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Completed Romm Sequence : %d"), CompletedRommSequence);
-	if (CompletedRommSequence + 1 >= _maxRoomCount)
+	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (_gameInstance)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Completed All"));
+		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
 		return;
 	}
 
-	LoadLevel(CompletedRommSequence + 1);
+	_gameInstance->ChangeRoomSequence(CompletedRommSequence);
 }
 
-void URoomManager::LoadLevel(int32 NextRoomSequence)
+void URoomManager::LoadLevel(FRoomData RoomData)
 {
-	// 게임 인스턴스가 없으면 로드 실패
-	if (!_gameInstance)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Game instance is null"));
-		return;
-	}
-	
-	_gameInstance->OnStartRoom(NextRoomSequence);
-	const FRoomData _nextRoomData = _gameInstance->GetNextRoomData(NextRoomSequence);
-
-	// 레벨 로드
-	FName RoomName = _nextRoomData.RoomTitle;
+	FName RoomName = RoomData.RoomTitle;
 	UE_LOG(LogTemp, Warning, TEXT("Loading room: %s"), *RoomName.ToString());
 	UGameplayStatics::OpenLevel(GetWorld(), RoomName);
 }
