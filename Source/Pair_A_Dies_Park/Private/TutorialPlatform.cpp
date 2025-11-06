@@ -26,8 +26,7 @@ ATutorialPlatform::ATutorialPlatform()
 
 }
 
-// C++ 구현부. 블루프린트에서 재정의 가능.
-void ATutorialPlatform::ActivatePlatform_Implementation()
+void ATutorialPlatform::OnActivatePuzzleAction()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Platform %s activated"), *GetName());
 
@@ -35,7 +34,7 @@ void ATutorialPlatform::ActivatePlatform_Implementation()
 	SetActorLocation(NewLocation);
 }
 
-void ATutorialPlatform::DeactivatePlatform_Implementation()
+void ATutorialPlatform::OnDeactivatePuzzleAction()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Platform %s deactivated"), *GetName());
 

@@ -3,25 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "JHS/Puzzle/PuzzleActionBase.h"
 #include "TutorialPlatform.generated.h"
 
 UCLASS()
-class ATutorialPlatform : public AActor
+class ATutorialPlatform : public APuzzleActionBase
 {
 	GENERATED_BODY()
 	
 public:
 	ATutorialPlatform();
-
-	// 블루프린트에서도 구현 가능.
-	UFUNCTION(BlueprintNativeEvent, Category = "Interaction")
-	void ActivatePlatform();
-	virtual void ActivatePlatform_Implementation(); // C++ 구현.
-
-	UFUNCTION(BlueprintNativeEvent, Category = "Interaction")
-	void DeactivatePlatform();
-	virtual void DeactivatePlatform_Implementation(); // C++ 구현.
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -30,5 +21,9 @@ protected:
 	FVector OriginalLocation;
 
 	virtual void BeginPlay() override;
+
+	virtual void OnActivatePuzzleAction() override;
+
+	virtual void OnDeactivatePuzzleAction() override;
 
 };

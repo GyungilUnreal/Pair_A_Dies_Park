@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "JHS/Puzzle/PuzzleTriggerBase.h"
 #include "Puzzle_TutorialButton.generated.h"
 
 class UBoxComponent;
-class ATutorialPlatform;
+class ASplit_Character;
 
 UCLASS()
-class APuzzle_TutorialButton : public AActor
+class APuzzle_TutorialButton : public APuzzleTriggerBase
 {
 	GENERATED_BODY()
 	
@@ -20,10 +20,6 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UBoxComponent> TriggerVolume;
-
-	// 레벨에 배치하고 연결할 액터
-	UPROPERTY(EditInstanceOnly, Category = "Puzzle Logic")
-	TObjectPtr<ATutorialPlatform> TargetPlatform;
 
 protected:
 	// 부모의 BeginPlay를 막기위해.
@@ -39,7 +35,16 @@ protected:
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+	// 통과를 위한 플레이어 수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Puzzle Logic")
+	int32 RequiredPlayerCount = 1;
+
 	//// 버튼 눌림 효과.
 	//UFUNCTION(NetMulticast)
 	//void Multicast_PlayButtonEffects();
+
+private:
+	// 존 안에 있는 플레이어 목록.
+	UPROPERTY()
+	TArray<TObjectPtr<ASplit_Character>> PlayerInZone;
 };
