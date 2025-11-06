@@ -3,6 +3,7 @@
 
 #include "JHS/Puzzle/PuzzleTriggerBase.h"
 #include "JHS/Puzzle/PuzzleBase.h"
+#include "JHS/Room/RoomController.h"
 
 // Sets default values
 APuzzleTriggerBase::APuzzleTriggerBase()
@@ -25,16 +26,14 @@ void APuzzleTriggerBase::Tick(float DeltaTime)
 
 }
 
-void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> Puzzle)
+void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class ARoomController> RoomController, int32 PuzzleKey)
 {
-	_puzzle = Puzzle;
+	_roomController = RoomController;
+	_puzzleKey = PuzzleKey;
 
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APuzzleTriggerBase::OnTrigger, _triggerDelay);
 }
 
 void APuzzleTriggerBase::OnTrigger()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Triggered %s"), *GetName());
-	_puzzle->OnChangeTriggerState(this, true);
+	_roomController->ChangePuzzleTriggerState(_puzzleKey, true);
 }

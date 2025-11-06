@@ -36,7 +36,7 @@ void APuzzleBase::InitializePuzzle(TObjectPtr<ARoomController> RoomController)
 	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleTriggerArray)
 	{
 		_puzzleTriggerMap.Add(_puzzleTrigger, false);
-		_puzzleTrigger->InitializePuzzleTrigger(this);
+		//_puzzleTrigger->InitializePuzzleTrigger(this);
 	}
 
 	if (_puzzleTriggerMap.Num() <= 0)
@@ -73,5 +73,5 @@ void APuzzleBase::OnChangeTriggerState(TObjectPtr<APuzzleTriggerBase> PuzzleTrig
 		_puzzleAction->ExecutePuzzleAction();
 	}
 	
-	_roomController->OnCompletePuzzle(_puzzleIndex);
+	//_roomController->OnCompletePuzzle(_puzzleIndex);
 }

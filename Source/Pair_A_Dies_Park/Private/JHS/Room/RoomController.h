@@ -7,6 +7,29 @@
 
 #include "RoomController.generated.h"
 
+class APuzzleTriggerBase;
+class APuzzleActionBase;
+class URoomManager;
+
+USTRUCT(BlueprintType)
+struct FPuzzleData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	int32 puzzleIndex = -1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	bool isCompleted = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	TArray<TObjectPtr<APuzzleTriggerBase>> puzzleTriggerArray = TArray<TObjectPtr<APuzzleTriggerBase>>();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	TArray<TObjectPtr<APuzzleActionBase>> puzzleActionArray = TArray<TObjectPtr<APuzzleActionBase>>();
+};
+
 UCLASS()
 class ARoomController : public AActor
 {
@@ -19,9 +42,17 @@ public:
 private:
 	TObjectPtr<class URoomManager> _roomManager = nullptr;
 
-	TArray<TObjectPtr<class APuzzleBase>> _puzzleArray = TArray<TObjectPtr<class APuzzleBase>>();
-
 	int32 _roomSequence = -1;
+
+	const int32 PUZZLE_DATA_RATE = 100;
+
+	TMap<int32, bool> _puzzleTriggerMap = TMap<int32, bool>();
+	
+	int32 _currentPuzzleIndex = 0;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle Data")
+	TArray<FPuzzleData> _puzzleDataArray = TArray<FPuzzleData>();
 
 protected:
 	// Called when the game starts or when spawned
@@ -34,8 +65,8 @@ public:
 private:
 	void InitializeRoomController();
 
-	TArray<TObjectPtr<class APuzzleBase>> SearchPuzzle();
-
 public:
-	void OnCompletePuzzle(int32 completedPuzzleIndex);
+	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
+
+	void ActivateNextPuzzle();
 };

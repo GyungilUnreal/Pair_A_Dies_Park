@@ -7,6 +7,8 @@
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomManager.h"
 #include "JHS/Puzzle/PuzzleBase.h"
+#include "JHS/Puzzle/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/PuzzleActionBase.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -57,41 +59,83 @@ void ARoomController::InitializeRoomController()
 	_roomSequence = _gameInstance->GetCurrentRoomSequence();
 	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
 
-	_puzzleArray = SearchPuzzle();
-	for (int32 i = 0; i < _puzzleArray.Num(); i++)
+	// 퍼즐 데이터 초기화
+	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
 	{
-		_puzzleArray[i]->InitializePuzzle(this);
-	}
-}
+		FPuzzleData& _puzzleData = _puzzleDataArray[i];
+		_puzzleData.puzzleIndex = i;
 
-TArray<TObjectPtr<class APuzzleBase>> ARoomController::SearchPuzzle()
-{
-	TArray<TObjectPtr<class APuzzleBase>> _resultPuzzleArray = TArray<TObjectPtr<class APuzzleBase>>();
-
-	// 월드에서 모든 APuzzleBase 액터 가져오기
-	TArray<AActor*> _foundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APuzzleBase::StaticClass(), _foundActors);
-
-	// 범위 내에 있는 퍼즐만 필터링
-	for (AActor* _actor : _foundActors)
-	{
-		TObjectPtr<APuzzleBase> _puzzle = Cast<APuzzleBase>(_actor);
-		if (_puzzle)
+		// 퍼즐 트리거 초기화
+		for (int32 j = 0; j < _puzzleData.puzzleTriggerArray.Num(); j++)
 		{
-			_resultPuzzleArray.Add(_puzzle);
+			int32 _puzzleKey = i * PUZZLE_DATA_RATE + j;
+			_puzzleTriggerMap.Add(_puzzleKey, false);
+			_puzzleData.puzzleTriggerArray[j]->InitializePuzzleTrigger(this, _puzzleKey);
+		}
+
+		// 퍼즐 액션 초기화
+		for (int32 j = 0; j < _puzzleData.puzzleActionArray.Num(); j++)
+		{
+			_puzzleData.puzzleActionArray[j]->InitializePuzzleAction();
 		}
 	}
-
-	return _resultPuzzleArray;
+	
+	// 첫 번째 퍼즐 활성화
+	_currentPuzzleIndex = -1;
+	ActivateNextPuzzle();
 }
 
-void ARoomController::OnCompletePuzzle(int32 completedPuzzleIndex)
+void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered)
 {
-	for (int32 i = 0; i < _puzzleArray.Num(); i++)
+	int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
+	auto _found = _puzzleTriggerMap.Find(PuzzleKey);
+	if (_found == nullptr)
 	{
-		if (!_puzzleArray[i]->IsCompletedPuzzle())
-			return;
+		int32 _triggerIndex = PuzzleKey % PUZZLE_DATA_RATE;
+
+		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle key : [%d] - PuzzleIndex: %d, TriggerIndex: %d"), PuzzleKey, _puzzleIndex, _triggerIndex);
+		return;
 	}
 
-	_roomManager->OnCompletedRoom(_roomSequence);
+	*_found = IsTriggered;
+	
+	int _triggerNum = _puzzleDataArray[_puzzleIndex].puzzleTriggerArray.Num();
+	for (int32 i = 0; i < _triggerNum; i++)
+	{
+		int32 _puzzleTriggerKey = _puzzleIndex * PUZZLE_DATA_RATE + i;
+		_found = _puzzleTriggerMap.Find(_puzzleTriggerKey);
+		if (_found == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Invalid puzzle trigger key : [%d]"), _puzzleTriggerKey);
+			return;
+		}
+
+		if (*_found != IsTriggered)
+			return;
+	}
+	
+	ActivateNextPuzzle();
+}
+
+void ARoomController::ActivateNextPuzzle()
+{
+	_currentPuzzleIndex++;
+	if (_currentPuzzleIndex < 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle index: %d"), _currentPuzzleIndex);
+		return;
+	}
+
+	if (_currentPuzzleIndex >= _puzzleDataArray.Num())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("All puzzles completed"));
+		_roomManager->OnCompletedRoom(_roomSequence);
+		return;
+	}
+	
+	FPuzzleData& _puzzleData = _puzzleDataArray[_currentPuzzleIndex];
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
+	{
+		_puzzleAction->ExecutePuzzleAction();
+	}
 }

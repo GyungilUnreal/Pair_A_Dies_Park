@@ -3,7 +3,7 @@
 #include "Puzzle_GoalZone.h"
 #include "Components/BoxComponent.h"
 #include "Split_Character.h"
-#include "RoomController.h"
+#include "JHS/Room/RoomController.h"
 
 APuzzle_GoalZone::APuzzle_GoalZone()
 {
@@ -45,7 +45,7 @@ void APuzzle_GoalZone::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActo
             UE_LOG(LogTemp, Warning, TEXT("Goal Zone Puzzle COMPLETED! (Required: %d, Current: %d)"), RequiredPlayerCount, PlayerInZone.Num());
 
             // 퍼즐 완료
-            CompletePuzzle(); 
+            //CompletePuzzle(); 
         }
 	}
 }

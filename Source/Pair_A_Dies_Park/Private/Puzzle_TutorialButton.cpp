@@ -5,7 +5,7 @@
 #include "Components/BoxComponent.h"
 #include "TutorialPlatform.h"
 #include "Split_Character.h"
-#include "RoomController.h"
+#include "JHS/Room/RoomController.h"
 
 APuzzle_TutorialButton::APuzzle_TutorialButton()
 {

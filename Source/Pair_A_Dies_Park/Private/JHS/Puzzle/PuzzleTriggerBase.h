@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "PuzzleTriggerBase.generated.h"
 
+class ARoomController;
+
 UCLASS()
 class APuzzleTriggerBase : public AActor
 {
@@ -17,10 +19,10 @@ public:
 
 private:
 	TObjectPtr<class APuzzleBase> _puzzle = nullptr;
+	TObjectPtr<class ARoomController> _roomController = nullptr;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Delay")
-	float _triggerDelay = 1.0f;
+	int32 _puzzleKey = -1;
 
 protected:
 	// Called when the game starts or when spawned
@@ -31,7 +33,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	void InitializePuzzleTrigger(TObjectPtr<class APuzzleBase> Puzzle);
+	void InitializePuzzleTrigger(TObjectPtr<class ARoomController> RoomController, int32 PuzzleKey);
 
 protected:
 	void OnTrigger();

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PuzzleBase.h"
+#include "JHS/Puzzle/PuzzleBase.h"
 #include "Puzzle_GoalZone.generated.h"
 
 class UBoxComponent;
