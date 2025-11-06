@@ -8,6 +8,16 @@
 
 class ARoomController;
 
+UENUM(BlueprintType)
+enum class E_PUZZLE_TRIGGER_TYPE : uint8
+{
+	Presence = 0 UMETA(DisplayName = "Presence"),			// 위치
+	Button UMETA(DisplayName = "Button"),					// 버튼
+	Destroy UMETA(DisplayName = "Destroy"),					// 파괴
+
+	SIZE UMETA(DisplayName = "SIZE")
+};
+
 UCLASS()
 class APuzzleTriggerBase : public AActor
 {
@@ -36,5 +46,7 @@ public:
 	void InitializePuzzleTrigger(TObjectPtr<class ARoomController> RoomController, int32 PuzzleKey);
 
 protected:
-	void OnTrigger();
+	void OnTriggerEnter();
+
+	void OnTriggerExit();
 };

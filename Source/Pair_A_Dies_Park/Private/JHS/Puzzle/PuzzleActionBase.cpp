@@ -25,11 +25,30 @@ void APuzzleActionBase::Tick(float DeltaTime)
 
 }
 
-void APuzzleActionBase::InitializePuzzleAction()
+void APuzzleActionBase::ActivatePuzzleAction()
 {
+	if (_isActive)
+		return;
+
+	_isActive = true;
+	OnActivatePuzzleAction();
+
+	if (_isDebug)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Activate Puzzle Action %d"), _actionIndex);
+	}
 }
 
-void APuzzleActionBase::ExecutePuzzleAction()
+void APuzzleActionBase::DeactivatePuzzleAction()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Action %d"), _actionIndex);
+	if (!_isActive)
+		return;
+
+	_isActive = false;
+	OnDeactivatePuzzleAction();
+
+	if (_isDebug)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Deactivate Puzzle Action %d"), _actionIndex);
+	}
 }

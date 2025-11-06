@@ -15,8 +15,14 @@ public:
 	// Sets default values for this actor's properties
 	APuzzleActionBase();
 
+private:
+	bool _isActive = false;
+
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Index")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
+	bool _isDebug = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
 	int32 _actionIndex = -1;
 
 protected:
@@ -28,7 +34,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	void InitializePuzzleAction();
+	void ActivatePuzzleAction();
 
-	virtual void ExecutePuzzleAction();
+	void DeactivatePuzzleAction();
+
+protected:
+	// 상속 구현
+	virtual void OnActivatePuzzleAction() { }
+
+	virtual void OnDeactivatePuzzleAction() { }
 };

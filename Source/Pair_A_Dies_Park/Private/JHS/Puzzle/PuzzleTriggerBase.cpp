@@ -33,7 +33,12 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class ARoomControlle
 
 }
 
-void APuzzleTriggerBase::OnTrigger()
+void APuzzleTriggerBase::OnTriggerEnter()
 {
 	_roomController->ChangePuzzleTriggerState(_puzzleKey, true);
+}
+
+void APuzzleTriggerBase::OnTriggerExit()
+{
+	_roomController->ChangePuzzleTriggerState(_puzzleKey, false);
 }

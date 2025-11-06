@@ -48,7 +48,7 @@ void APuzzleBase::InitializePuzzle(TObjectPtr<ARoomController> RoomController)
 	// Initialize Puzzle Action
 	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleActionArray)
 	{
-		_puzzleAction->InitializePuzzleAction();
+		//_puzzleAction->InitializePuzzleAction();
 	}
 }
 
@@ -70,7 +70,7 @@ void APuzzleBase::OnChangeTriggerState(TObjectPtr<APuzzleTriggerBase> PuzzleTrig
 	_isCompleted = true;
 	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleActionArray)
 	{
-		_puzzleAction->ExecutePuzzleAction();
+		//_puzzleAction->ExecutePuzzleAction();
 	}
 	
 	//_roomController->OnCompletePuzzle(_puzzleIndex);

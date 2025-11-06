@@ -17,11 +17,8 @@ struct FPuzzleData
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
-	int32 puzzleIndex = -1;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
-	bool isCompleted = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	bool isToggleTrigger = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
 	TArray<TObjectPtr<APuzzleTriggerBase>> puzzleTriggerArray = TArray<TObjectPtr<APuzzleTriggerBase>>();
@@ -47,8 +44,6 @@ private:
 	const int32 PUZZLE_DATA_RATE = 100;
 
 	TMap<int32, bool> _puzzleTriggerMap = TMap<int32, bool>();
-	
-	int32 _currentPuzzleIndex = 0;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle Data")
@@ -62,11 +57,13 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
-	void InitializeRoomController();
-
 public:
 	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
 
-	void ActivateNextPuzzle();
+private:
+	void InitializeRoomController();
+
+	bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
+
+	void ChangePuzzleActionState(int32 PuzzleKey, bool IsActive);
 };
