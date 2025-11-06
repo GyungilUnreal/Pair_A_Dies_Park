@@ -8,6 +8,7 @@
 #include "RoomController.generated.h"
 
 class APuzzleTriggerBase;
+class APresenceTrigger;
 class APuzzleActionBase;
 class URoomManager;
 
@@ -43,11 +44,16 @@ private:
 
 	const int32 PUZZLE_DATA_RATE = 100;
 
+	const int32 ROOM_CLEAR_DOOR_KEY = -1;
+
 	TMap<int32, bool> _puzzleTriggerMap = TMap<int32, bool>();
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle")
 	TArray<FPuzzleData> _puzzleDataArray = TArray<FPuzzleData>();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle")
+	TObjectPtr<APresenceTrigger> _roomClearDoor = nullptr;
 
 protected:
 	// Called when the game starts or when spawned
@@ -65,5 +71,5 @@ private:
 
 	bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 
-	void ChangePuzzleActionState(int32 PuzzleKey, bool IsActive);
+	void ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive);
 };

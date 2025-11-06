@@ -7,6 +7,7 @@
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomManager.h"
 #include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "JHS/Puzzle/Action/PuzzleActionBase.h"
 
 // Sets default values
@@ -34,6 +35,13 @@ void ARoomController::Tick(float DeltaTime)
 
 void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered)
 {
+	// 룸 클리어 문
+	if (PuzzleKey == ROOM_CLEAR_DOOR_KEY)
+	{
+		_roomManager->OnCompletedRoom(_roomSequence);
+		return;
+	}
+
 	// 트리거 상태 갱신
 	bool* _isTriggered = nullptr;
 	if (!TryGetValue(PuzzleKey, _isTriggered))
@@ -96,6 +104,16 @@ void ARoomController::InitializeRoomController()
 	_roomSequence = _gameInstance->GetCurrentRoomSequence();
 	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
 
+	// 룸 클리어 문 트리거
+	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);
+	_roomClearDoor->InitializePuzzleTrigger(this, ROOM_CLEAR_DOOR_KEY);
+
+	if (_puzzleDataArray.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trigger is not set"));
+		return;
+	}
+
 	// 퍼즐 데이터 초기화
 	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
 	{
@@ -105,13 +123,20 @@ void ARoomController::InitializeRoomController()
 		for (int32 j = 0; j < _puzzleData.puzzleTriggerArray.Num(); j++)
 		{
 			int32 _puzzleKey = i * PUZZLE_DATA_RATE + j;
+			TObjectPtr<APuzzleTriggerBase> _trigger = _puzzleData.puzzleTriggerArray[j];
+			if (_trigger == nullptr)
+				continue;
+
+			_trigger->InitializePuzzleTrigger(this, _puzzleKey);
 			_puzzleTriggerMap.Add(_puzzleKey, false);
-			_puzzleData.puzzleTriggerArray[j]->InitializePuzzleTrigger(this, _puzzleKey);
 		}
 
 		// 퍼즐 액션 초기화
 		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
 		{
+			if (_puzzleAction == nullptr)
+				continue;
+
 			_puzzleAction->DeactivatePuzzleAction();
 		}
 	}
@@ -132,10 +157,9 @@ bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
 	return true;
 }
 
-void ARoomController::ChangePuzzleActionState(int32 PuzzleKey, bool IsActive)
+void ARoomController::ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive)
 {
-	int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
-	FPuzzleData& _puzzleData = _puzzleDataArray[_puzzleIndex];
+	FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
 	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
 	{
 		// 활성화

@@ -17,6 +17,8 @@ public:
 	UMyGameInstance();
 
 private:
+	bool _isGameClear = false;
+
 #pragma region Room Data Table
 	const FString _roomDataTablePath = TEXT("/Game/Collaborators/JHS/Resource/Data/RoomTable.RoomTable");
 

@@ -25,19 +25,30 @@ void APuzzleTriggerBase::Tick(float DeltaTime)
 
 }
 
-void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<class ARoomController> RoomController, int32 PuzzleKey)
+void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey)
 {
 	_roomController = RoomController;
 	_puzzleKey = PuzzleKey;
-
 }
 
 void APuzzleTriggerBase::OnTriggerEnter()
 {
+	if (_roomController == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OnTriggerEnter: _roomController is nullptr"));
+		return;
+	}
+
 	_roomController->ChangePuzzleTriggerState(_puzzleKey, true);
 }
 
 void APuzzleTriggerBase::OnTriggerExit()
 {
+	if (_roomController == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OnTriggerExit: _roomController is nullptr"));
+		return;
+	}
+
 	_roomController->ChangePuzzleTriggerState(_puzzleKey, false);
 }

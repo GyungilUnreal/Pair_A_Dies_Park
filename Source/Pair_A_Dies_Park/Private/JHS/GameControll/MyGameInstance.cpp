@@ -72,6 +72,9 @@ void UMyGameInstance::RegistRoomSequence(const TArray<int32>& RoomSequenceArray)
 
 void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 {
+	if (_isGameClear)
+		return;
+
 	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (!_gameMode)
 	{
@@ -88,6 +91,7 @@ void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 	else if (CompletedRoomSequence == -1)
 	{
 		_currentRoomSequence = -1;
+		_isGameClear = false;
 	}
 	else
 	{
@@ -103,6 +107,7 @@ void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Completed all sequence"));
 
+		_isGameClear = true;
 		_gameMode->OnGameEnd();
 		return;
 	}

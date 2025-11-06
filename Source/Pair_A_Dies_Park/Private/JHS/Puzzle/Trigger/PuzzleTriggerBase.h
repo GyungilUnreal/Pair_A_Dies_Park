@@ -28,8 +28,7 @@ public:
 	APuzzleTriggerBase();
 
 private:
-	TObjectPtr<class APuzzleBase> _puzzle = nullptr;
-	TObjectPtr<class ARoomController> _roomController = nullptr;
+	TObjectPtr<ARoomController> _roomController = nullptr;
 
 protected:
 	int32 _puzzleKey = -1;
@@ -43,7 +42,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	void InitializePuzzleTrigger(TObjectPtr<class ARoomController> RoomController, int32 PuzzleKey);
+	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
 
 protected:
 	void OnTriggerEnter();
