@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "JHS/Puzzle/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "Puzzle_TutorialButton.generated.h"
 
 class UBoxComponent;

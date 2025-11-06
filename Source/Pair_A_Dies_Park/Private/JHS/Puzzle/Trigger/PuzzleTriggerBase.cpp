@@ -1,8 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "JHS/Puzzle/PuzzleTriggerBase.h"
-#include "JHS/Puzzle/PuzzleBase.h"
+#include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "JHS/Room/RoomController.h"
 
 // Sets default values

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "JHS/Puzzle/PuzzleActionBase.h"
+#include "JHS/Puzzle/Action/PuzzleActionBase.h"
 
 // Sets default values
 APuzzleActionBase::APuzzleActionBase()

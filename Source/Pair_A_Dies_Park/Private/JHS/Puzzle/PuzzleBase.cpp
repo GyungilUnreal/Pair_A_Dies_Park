@@ -3,8 +3,8 @@
 
 #include "JHS/Puzzle/PuzzleBase.h"
 #include "JHS/Room/RoomController.h"
-#include "JHS/Puzzle/PuzzleTriggerBase.h"
-#include "JHS/Puzzle/PuzzleActionBase.h"
+#include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/Action/PuzzleActionBase.h"
 
 // Sets default values
 APuzzleBase::APuzzleBase()

@@ -6,9 +6,8 @@
 #include "JHS/GameControll/MyGameMode.h"
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomManager.h"
-#include "JHS/Puzzle/PuzzleBase.h"
-#include "JHS/Puzzle/PuzzleTriggerBase.h"
-#include "JHS/Puzzle/PuzzleActionBase.h"
+#include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
+#include "JHS/Puzzle/Action/PuzzleActionBase.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -43,21 +42,26 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 	*_isTriggered = IsTriggered;
 
 	// 트리거 완료 체크
-	bool _isActivate = false;
+	bool _isActivate = true;
 	int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
 	FPuzzleData& _puzzleData = _puzzleDataArray[_puzzleIndex];
 	int _triggerNum = _puzzleData.puzzleTriggerArray.Num();
 
+	// 모든 트리거가 활성화되었는지 확인
 	for (int32 i = 0; i < _triggerNum; i++)
 	{
 		int32 _puzzleTriggerKey = _puzzleIndex * PUZZLE_DATA_RATE + i;
-		if (!TryGetValue(_puzzleTriggerKey, _isTriggered))
+		bool* _triggerState = nullptr;
+		
+		if (!TryGetValue(_puzzleTriggerKey, _triggerState))
 			return;
 
-		if (*_isTriggered == false)
-			return;
+		if (*_triggerState == false)
+		{
+			_isActivate = false;
+			break;
+		}
 	}
-	_isActivate = true;
 
 	// 액션 상태 변경
 	if (!_isActivate && _puzzleData.isToggleTrigger)
@@ -115,16 +119,16 @@ void ARoomController::InitializeRoomController()
 
 bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
 {
-	auto _found = _puzzleTriggerMap.Find(PuzzleKey);
+	bool* _found = _puzzleTriggerMap.Find(PuzzleKey);
 	if (_found == nullptr)
 	{
-		int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
-		int32 _triggerIndex = PuzzleKey % PUZZLE_DATA_RATE;
-		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle trigger key : [%d] - PuzzleIndex : [%d], TriggerIndex : [%d]"), PuzzleKey, _puzzleIndex, _triggerIndex);
+		int puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
+		int triggerIndex = PuzzleKey % PUZZLE_DATA_RATE;
+		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle trigger key : [%d] - PuzzleIndex : [%d], TriggerIndex : [%d]"), PuzzleKey, puzzleIndex, triggerIndex);
 		return false;
 	}
-	
-	*OutValue = *_found;
+
+	OutValue = _found;
 	return true;
 }
 

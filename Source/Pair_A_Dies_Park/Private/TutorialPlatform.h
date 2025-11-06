@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "JHS/Puzzle/PuzzleActionBase.h"
+#include "JHS/Puzzle/Action/PuzzleActionBase.h"
 #include "TutorialPlatform.generated.h"
 
 UCLASS()
