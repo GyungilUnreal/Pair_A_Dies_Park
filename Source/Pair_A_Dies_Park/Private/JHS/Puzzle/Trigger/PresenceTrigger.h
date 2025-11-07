@@ -23,7 +23,13 @@ private:
 	TArray<TObjectPtr<ASplit_Character>> _playerInZone;
 	
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trigger|Player Count")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Components")
+	TObjectPtr<UStaticMeshComponent> _rootComponent = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Debug")
+	bool _isDebugLog = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Player Count")
 	int32 _requirePlayerCount = 1;
 
 protected:
