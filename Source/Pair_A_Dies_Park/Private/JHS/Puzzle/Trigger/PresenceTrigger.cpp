@@ -3,14 +3,17 @@
 
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "Components/BoxComponent.h"
-#include "Split_Character.h"
+#include "JHS/PlayerBase.h"
 
 APresenceTrigger::APresenceTrigger()
 {
     PrimaryActorTick.bCanEverTick = false;
 
+	_rootComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootComponent"));
+	_rootComponent->SetupAttachment(RootComponent);
+
     _boxTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxTrigger"));
-    _boxTrigger->SetupAttachment(RootComponent);
+    _boxTrigger->SetupAttachment(_rootComponent);
 
     // 오버랩 이벤트에 함수 바인딩
     _boxTrigger->OnComponentBeginOverlap.AddDynamic(this, &APresenceTrigger::OnOverlapBegin);
@@ -26,51 +29,56 @@ void APresenceTrigger::BeginPlay()
 
 void APresenceTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	ASplit_Character* Player = Cast<ASplit_Character>(OtherActor);
+	// TODO : 플레이어 스크립트 통일
+	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
 	
-	// 밟은 액터가 플레이어인지 확인
-	if (Player == nullptr)
+	if (_player == nullptr)
 		return;
 
-	if (HasAuthority())
+	// 서버인지 확인
+	if (!HasAuthority())
+		return;
+	
+	if (!_playerInZone.Contains(_player))
 	{
-		// 중복 추가 방지하며 배열에 추가
-		if (!_playerInZone.Contains(Player))
+		_playerInZone.Add(_player);
+		if (_isDebugLog)
 		{
-			_playerInZone.Add(Player);
-			UE_LOG(LogTemp, Warning, TEXT("%s entered. Current players in zone: %d"), *Player->GetName(), _playerInZone.Num());
+			UE_LOG(LogTemp, Warning, TEXT("%s entered. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
 		}
+	}
 
-		// 인원 수 체크
-		if (_playerInZone.Num() >= _requirePlayerCount)
+	if (_playerInZone.Num() >= _requirePlayerCount)
+	{
+		if (_isDebugLog)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Goal Zone Puzzle COMPLETED! (Required: %d, Current: %d)"), _requirePlayerCount, _playerInZone.Num());
-		
-			// 퍼즐 완료
-			OnTriggerEnter(); 
 		}
+	
+		// 퍼즐 완료
+		OnTriggerEnter(); 
 	}
 }
 
 void APresenceTrigger::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	ASplit_Character* Player = Cast<ASplit_Character>(OtherActor);
+	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
 
-	// 뗀 액터가 플레이어인지 확인
-	if (Player == nullptr)
+	if (_player == nullptr)
 		return;
 
-	// 서버에서 실행하는지
-	if (HasAuthority())
+	// 서버인지 확인
+	if (!HasAuthority())
+		return;
+	
+	_playerInZone.Remove(_player);
+	if (_isDebugLog)
 	{
-		// 플레이어 제거 로직
-		_playerInZone.Remove(Player);
-		UE_LOG(LogTemp, Warning, TEXT("%s left. Current players in zone: %d"), *Player->GetName(), _playerInZone.Num());
+		UE_LOG(LogTemp, Warning, TEXT("%s left. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
+	}
 
-		// 인원 수가 모자라면 '트리거 꺼짐' 신호 전송
-		if (_playerInZone.Num() < _requirePlayerCount)
-		{
-			OnTriggerExit();
-		}
+	if (_playerInZone.Num() < _requirePlayerCount)
+	{
+		OnTriggerExit();
 	}
 }

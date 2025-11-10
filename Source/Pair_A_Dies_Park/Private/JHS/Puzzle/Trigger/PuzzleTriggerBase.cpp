@@ -31,6 +31,14 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> Roo
 	_puzzleKey = PuzzleKey;
 }
 
+void APuzzleTriggerBase::DeactiveTrigger()
+{
+	if (_isDeactiveOnTrigger)
+	{
+		SetActorHiddenInGame(true);
+	}
+}
+
 void APuzzleTriggerBase::OnTriggerEnter()
 {
 	if (_roomController == nullptr)

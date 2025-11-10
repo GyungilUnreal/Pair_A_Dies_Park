@@ -22,7 +22,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
 	bool _isDebug = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
 	int32 _actionIndex = -1;
 
 protected:
@@ -33,14 +33,16 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-public:
-	void ActivatePuzzleAction();
-
-	void DeactivatePuzzleAction();
-
 protected:
 	// 상속 구현
 	virtual void OnActivatePuzzleAction() { }
 
 	virtual void OnDeactivatePuzzleAction() { }
+
+public:
+	void InitializePuzzleAction();
+
+	void ActivatePuzzleAction();
+
+	void DeactivatePuzzleAction();
 };

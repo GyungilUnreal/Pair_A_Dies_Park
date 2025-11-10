@@ -23,6 +23,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
 	FString RoomDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	float PlayerScale;
 };
 
 UCLASS()

@@ -47,5 +47,5 @@ public:
 
 	int32 GetCurrentRoomSequence() { return _currentRoomSequence; }
 
-	FRoomData GetRoomData(int32 RoomIndex) { return _roomDataArray[RoomIndex]; }
+	FRoomData GetRoomData(int32 RoomSequence) { return _roomDataArray[_roomSequenceArray[RoomSequence]]; }
 };

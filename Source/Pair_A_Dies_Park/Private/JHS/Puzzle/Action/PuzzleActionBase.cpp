@@ -25,6 +25,12 @@ void APuzzleActionBase::Tick(float DeltaTime)
 
 }
 
+void APuzzleActionBase::InitializePuzzleAction()
+{
+	_isActive = false;
+	OnDeactivatePuzzleAction();
+}
+
 void APuzzleActionBase::ActivatePuzzleAction()
 {
 	if (_isActive)

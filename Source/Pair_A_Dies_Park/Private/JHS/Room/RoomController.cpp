@@ -9,6 +9,7 @@
 #include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "JHS/Puzzle/Action/PuzzleActionBase.h"
+#include "JHS/PlayerBase.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -104,6 +105,15 @@ void ARoomController::InitializeRoomController()
 	_roomSequence = _gameInstance->GetCurrentRoomSequence();
 	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
 
+	// 플레이어 스케일
+	TObjectPtr<APlayerBase> _playerBase = Cast<APlayerBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+	if (!_playerBase)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Pawn player is nullptr"));
+		return;
+	}
+	_playerBase->SetPlayerScale(_gameInstance->GetRoomData(_roomSequence).PlayerScale);
+
 	// 룸 클리어 문 트리거
 	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);
 	_roomClearDoor->InitializePuzzleTrigger(this, ROOM_CLEAR_DOOR_KEY);
@@ -137,7 +147,7 @@ void ARoomController::InitializeRoomController()
 			if (_puzzleAction == nullptr)
 				continue;
 
-			_puzzleAction->DeactivatePuzzleAction();
+			_puzzleAction->InitializePuzzleAction();
 		}
 	}
 }
@@ -160,15 +170,28 @@ bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
 void ARoomController::ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive)
 {
 	FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
-	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
+
+	if (IsActive)
 	{
-		// 활성화
-		if (IsActive)
+		// 액션 활성화
+		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
 		{
 			_puzzleAction->ActivatePuzzleAction();
 		}
-		// 비활성화
-		else
+
+		// 트리거 비활성화
+		if (_puzzleData.isToggleTrigger)
+		{
+			for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData.puzzleTriggerArray)
+			{
+				_puzzleTrigger->DeactiveTrigger();
+			}
+		}
+	}
+	else
+	{
+		// 액션 비활성화
+		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.puzzleActionArray)
 		{
 			_puzzleAction->DeactivatePuzzleAction();
 		}

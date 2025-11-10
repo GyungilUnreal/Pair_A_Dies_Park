@@ -33,6 +33,9 @@ private:
 protected:
 	int32 _puzzleKey = -1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	bool _isDeactiveOnTrigger = false;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -43,6 +46,8 @@ public:
 
 public:
 	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
+
+	void DeactiveTrigger();
 
 protected:
 	void OnTriggerEnter();
