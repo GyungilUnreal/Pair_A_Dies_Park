@@ -7,6 +7,7 @@
 class UUserWidget;
 class UWidgetComponent;
 class UCameraComponent;
+class UGazeTextTargetComponent;
 
 USTRUCT(BlueprintType)
 struct FGazeDetectSet
@@ -92,6 +93,9 @@ protected:
 
 	// 액터에 위젯 컴포넌트 하나 붙이는 헬퍼
 	UWidgetComponent* SpawnWidgetOnActor(AActor* TargetActor, TSubclassOf<UUserWidget> WidgetClass) const;
+
+	// 감지된 액터에 붙은 텍스트 컴포넌트를 보고 위젯 글자를 바꿔주는 헬퍼
+	void ApplyGazeTextIfAny(AActor* TargetActor, UWidgetComponent* WidgetComp);
 
 private:
 	// 현재 바라보고 있는 최종 타깃

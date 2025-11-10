@@ -1,5 +1,6 @@
 #include "GazeInteractorComponent.h"
 #include "GazeInteractableInterface.h"
+#include "GazeTextTargetComponent.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
@@ -7,6 +8,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Components/TextBlock.h"
 
 UGazeInteractorComponent::UGazeInteractorComponent()
 {
@@ -313,6 +315,9 @@ void UGazeInteractorComponent::ShowWidgetForSet(AActor* TargetActor, int32 SetIn
 		return;
 
 	CurrentWidgetComp = SpawnWidgetOnActor(TargetActor, Set.WidgetClass);
+
+	// 여기서 감지용 텍스트 컴포넌트를 찾아서 UI에 적용
+	ApplyGazeTextIfAny(TargetActor, CurrentWidgetComp);
 }
 
 void UGazeInteractorComponent::HideCurrentWidget()
@@ -469,4 +474,47 @@ void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* 
 		}
 	}
 	CandidateWidgetMap.Empty();
+}
+
+void UGazeInteractorComponent::ApplyGazeTextIfAny(AActor* TargetActor, UWidgetComponent* WidgetComp)
+{
+	if (!TargetActor || !WidgetComp)
+	{
+		return;
+	}
+
+	// 액터에 붙은 텍스트 설정용 컴포넌트 찾기
+	UGazeTextTargetComponent* TextComp = TargetActor->FindComponentByClass<UGazeTextTargetComponent>();
+	if (!TextComp)
+	{
+		return; // 없으면 아무것도 안 함
+	}
+
+	// 위젯 실제 인스턴스 가져오기
+	UUserWidget* UserWidget = WidgetComp->GetUserWidgetObject();
+	if (!UserWidget)
+	{
+		return;
+	}
+
+	// 이름이 지정돼 있으면 그 위젯만 찾아서 텍스트 넣기
+	if (TextComp->TextWidgetName != NAME_None)
+	{
+		if (UWidget* Found = UserWidget->GetWidgetFromName(TextComp->TextWidgetName))
+		{
+			if (UTextBlock* TextBlock = Cast<UTextBlock>(Found))
+			{
+				TextBlock->SetText(TextComp->DisplayText);
+			}
+		}
+	}
+	else
+	{
+		// 이름이 없으면 위젯 전체에서 TextBlock 하나만 찾아서 넣어주는 식으로 단순 처리
+		// (필요하면 여기 로직을 더 정교하게 바꿔도 됨)
+		if (UTextBlock* RootText = Cast<UTextBlock>(UserWidget->GetRootWidget()))
+		{
+			RootText->SetText(TextComp->DisplayText);
+		}
+	}
 }
