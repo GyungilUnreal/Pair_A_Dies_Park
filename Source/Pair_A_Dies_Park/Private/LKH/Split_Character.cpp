@@ -83,8 +83,6 @@ void ASplit_Character::BeginPlay()
 	{
 		InitializeAbilities();
 	}
-
-	UCharacterFunctionLibrary::SetPlayerScale(this, 1.5f);
 }
 
 //////////////////////////////////////////////////////////////////////////
