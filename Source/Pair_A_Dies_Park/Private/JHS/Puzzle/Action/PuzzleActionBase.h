@@ -40,6 +40,8 @@ protected:
 	virtual void OnDeactivatePuzzleAction() { }
 
 public:
+	void InitializePuzzleAction();
+
 	void ActivatePuzzleAction();
 
 	void DeactivatePuzzleAction();

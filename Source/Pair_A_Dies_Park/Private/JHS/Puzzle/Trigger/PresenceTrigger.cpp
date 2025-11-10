@@ -3,7 +3,7 @@
 
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "Components/BoxComponent.h"
-#include "Split_Character.h"
+#include "JHS/PlayerBase.h"
 
 APresenceTrigger::APresenceTrigger()
 {
@@ -29,56 +29,56 @@ void APresenceTrigger::BeginPlay()
 
 void APresenceTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	ASplit_Character* _player = Cast<ASplit_Character>(OtherActor);
+	// TODO : 플레이어 스크립트 통일
+	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
 	
-	// 밟은 액터가 플레이어인지 확인
 	if (_player == nullptr)
 		return;
 
 	// 서버인지 확인
-	if (HasAuthority())
+	if (!HasAuthority())
+		return;
+	
+	if (!_playerInZone.Contains(_player))
 	{
-		if (!_playerInZone.Contains(_player))
+		_playerInZone.Add(_player);
+		if (_isDebugLog)
 		{
-			_playerInZone.Add(_player);
-			if (_isDebugLog)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("%s entered. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
-			}
+			UE_LOG(LogTemp, Warning, TEXT("%s entered. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
 		}
+	}
 
-		if (_playerInZone.Num() >= _requirePlayerCount)
+	if (_playerInZone.Num() >= _requirePlayerCount)
+	{
+		if (_isDebugLog)
 		{
-			if (_isDebugLog)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Goal Zone Puzzle COMPLETED! (Required: %d, Current: %d)"), _requirePlayerCount, _playerInZone.Num());
-			}
-		
-			// 퍼즐 완료
-			OnTriggerEnter(); 
+			UE_LOG(LogTemp, Warning, TEXT("Goal Zone Puzzle COMPLETED! (Required: %d, Current: %d)"), _requirePlayerCount, _playerInZone.Num());
 		}
+	
+		// 퍼즐 완료
+		OnTriggerEnter(); 
 	}
 }
 
 void APresenceTrigger::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	ASplit_Character* _player = Cast<ASplit_Character>(OtherActor);
+	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
 
 	if (_player == nullptr)
 		return;
 
 	// 서버인지 확인
-	if (HasAuthority())
+	if (!HasAuthority())
+		return;
+	
+	_playerInZone.Remove(_player);
+	if (_isDebugLog)
 	{
-		_playerInZone.Remove(_player);
-		if (_isDebugLog)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("%s left. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
-		}
+		UE_LOG(LogTemp, Warning, TEXT("%s left. Current players in zone: %d"), *_player->GetName(), _playerInZone.Num());
+	}
 
-		if (_playerInZone.Num() < _requirePlayerCount)
-		{
-			OnTriggerExit();
-		}
+	if (_playerInZone.Num() < _requirePlayerCount)
+	{
+		OnTriggerExit();
 	}
 }
