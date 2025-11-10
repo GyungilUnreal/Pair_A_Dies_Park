@@ -433,39 +433,40 @@ void UGazeInteractorComponent::ServerTryInteract_Implementation(AActor* Instigat
 
 void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* TargetActor, int32 SetIndex)
 {
-	if (!TargetActor)
-	{
+	if (!TargetActor || !DetectSets.IsValidIndex(SetIndex))
 		return;
-	}
-
-	if (!DetectSets.IsValidIndex(SetIndex))
-	{
-		return;
-	}
 
 	const FGazeDetectSet& Set = DetectSets[SetIndex];
 
-	// 1) 우선 세트에 정의된 컴포넌트를 이 액터에서 다시 찾는다
+	// 대상 컴포넌트 찾기
 	UActorComponent* TargetComp = nullptr;
 	if (*Set.TargetComponentClass)
 	{
 		TargetComp = TargetActor->FindComponentByClass(Set.TargetComponentClass);
 	}
 
-	// 2) 컴포넌트가 인터페이스를 구현했다면 그쪽을 먼저 호출
+	// 인터페이스 호출
 	if (TargetComp && TargetComp->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
 	{
 		IGazeInteractableInterface::Execute_Interact(TargetComp, InstigatorActor);
-		return;
 	}
-
-	// 3) 아니면 액터 자체가 인터페이스 구현했는지 확인
-	if (TargetActor->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
+	else if (TargetActor->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
 	{
 		IGazeInteractableInterface::Execute_Interact(TargetActor, InstigatorActor);
-		return;
 	}
 
-	// 4) 둘 다 없으면 아무것도 안 함 (로그 찍어도 됨)
-	// UE_LOG(LogTemp, Warning, TEXT("ProcessInteract: Target has no GazeInteractableInterface"));
+	// 여기서 UI 정리
+	HideCurrentWidget();
+	CurrentTargetActor = nullptr;
+	CurrentSetIndex = INDEX_NONE;
+
+	// 후보 위젯들도 정리
+	for (auto& Pair : CandidateWidgetMap)
+	{
+		if (Pair.Value)
+		{
+			Pair.Value->DestroyComponent();
+		}
+	}
+	CandidateWidgetMap.Empty();
 }
