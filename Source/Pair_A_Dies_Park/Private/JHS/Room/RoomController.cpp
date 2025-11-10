@@ -9,7 +9,7 @@
 #include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "JHS/Puzzle/Action/PuzzleActionBase.h"
-#include "JHS/PlayerBase.h"
+#include "CharacterFunctionLibrary.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -106,13 +106,20 @@ void ARoomController::InitializeRoomController()
 	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
 
 	// 플레이어 스케일
-	TObjectPtr<APlayerBase> _playerBase = Cast<APlayerBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
-	if (!_playerBase)
+	FRoomData _roomData = _gameInstance->GetRoomData(_roomSequence);
+	TArray<AActor*> _pawnArray;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), _pawnArray);
+	TObjectPtr<ACharacter> _player = nullptr;
+	for (AActor* _actor : _pawnArray)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Pawn player is nullptr"));
-		return;
+		_player = Cast<ACharacter>(_actor);
+		if (_player)
+		{
+
+			UCharacterFunctionLibrary::SetPlayerScale(_player, _roomData.PlayerScale);
+			UCharacterFunctionLibrary::SetCameraDistance(_player, _roomData.CameraDistance);
+		}
 	}
-	_playerBase->SetPlayerScale(_gameInstance->GetRoomData(_roomSequence).PlayerScale);
 
 	// 룸 클리어 문 트리거
 	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);

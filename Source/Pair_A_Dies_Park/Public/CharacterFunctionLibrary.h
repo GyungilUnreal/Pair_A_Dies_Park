@@ -18,4 +18,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "CharacterUtils")
     static void SetPlayerScale(ACharacter* Character, float PlayerScale);
+
+    UFUNCTION(BlueprintCallable, Category = "CharacterUtils")
+    static void SetCameraDistance(ACharacter* Character, float CameraDistance);
 };

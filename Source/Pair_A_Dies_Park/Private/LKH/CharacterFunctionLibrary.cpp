@@ -1,5 +1,7 @@
 #include "CharacterFunctionLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Split_Character.h"
+#include "GameFramework/SpringArmComponent.h"
 
 bool UCharacterFunctionLibrary::IsMovingOnGround(ACharacter* Character)
 {
@@ -16,6 +18,14 @@ void UCharacterFunctionLibrary::SetWalkSpeed(ACharacter* Character, float NewSpe
 
 void UCharacterFunctionLibrary::SetPlayerScale(ACharacter* Character, float PlayerScale)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Player scale : [&f]"), PlayerScale);
     Character->GetRootComponent()->SetWorldScale3D(FVector(PlayerScale, PlayerScale, PlayerScale));
+}
+
+void UCharacterFunctionLibrary::SetCameraDistance(ACharacter* Character, float CameraDistance)
+{
+    TObjectPtr<ASplit_Character> _player = Cast<ASplit_Character>(Character);
+    if (_player)
+    {
+        _player->GetCameraBoom()->TargetArmLength = CameraDistance;
+    }
 }

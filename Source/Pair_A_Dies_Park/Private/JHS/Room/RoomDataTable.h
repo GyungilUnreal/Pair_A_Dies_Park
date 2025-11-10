@@ -26,6 +26,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
 	float PlayerScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RoomData")
+	float CameraDistance;
 };
 
 UCLASS()

@@ -3,7 +3,7 @@
 
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "Components/BoxComponent.h"
-#include "JHS/PlayerBase.h"
+#include "Split_Character.h"
 
 APresenceTrigger::APresenceTrigger()
 {
@@ -30,7 +30,7 @@ void APresenceTrigger::BeginPlay()
 void APresenceTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// TODO : 플레이어 스크립트 통일
-	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
+	ASplit_Character* _player = Cast<ASplit_Character>(OtherActor);
 	
 	if (_player == nullptr)
 		return;
@@ -62,7 +62,7 @@ void APresenceTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActo
 
 void APresenceTrigger::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	APlayerBase* _player = Cast<APlayerBase>(OtherActor);
+	ASplit_Character* _player = Cast<ASplit_Character>(OtherActor);
 
 	if (_player == nullptr)
 		return;

@@ -7,7 +7,7 @@
 #include "PresenceTrigger.generated.h"
 
 class UBoxComponent;
-class APlayerBase;
+class ASplit_Character;
 
 UCLASS()
 class APresenceTrigger : public APuzzleTriggerBase
@@ -20,7 +20,7 @@ public:
 private:
 	TObjectPtr<UBoxComponent> _boxTrigger = nullptr;
 
-	TArray<TObjectPtr<APlayerBase>> _playerInZone;
+	TArray<TObjectPtr<ASplit_Character>> _playerInZone;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Components")

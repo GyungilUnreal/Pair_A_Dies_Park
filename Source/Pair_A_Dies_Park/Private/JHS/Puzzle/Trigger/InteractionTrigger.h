@@ -16,8 +16,10 @@ class AInteractionTrigger : public APuzzleTriggerBase
 public:
 	AInteractionTrigger();
 
-public:
+protected:
+	UFUNCTION(BlueprintCallable, Category = "Puzzle Trigger|Interaction")
 	void InteractActicate();
 
+	UFUNCTION(BlueprintCallable, Category = "Puzzle Trigger|Interaction")
 	void InteractDeacticate();
 };
