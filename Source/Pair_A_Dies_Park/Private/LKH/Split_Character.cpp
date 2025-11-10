@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemGlobals.h"
+#include "CharacterFunctionLibrary.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ASplit_Character
@@ -82,6 +83,8 @@ void ASplit_Character::BeginPlay()
 	{
 		InitializeAbilities();
 	}
+
+	UCharacterFunctionLibrary::SetPlayerScale(this, 1.5f);
 }
 
 //////////////////////////////////////////////////////////////////////////
