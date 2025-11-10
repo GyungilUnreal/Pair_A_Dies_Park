@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemGlobals.h"
+#include "CharacterFunctionLibrary.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ASplit_Character
