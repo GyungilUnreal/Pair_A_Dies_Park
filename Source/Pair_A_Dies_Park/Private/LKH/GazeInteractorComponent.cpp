@@ -7,305 +7,465 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-#include "Net/UnrealNetwork.h"
 
 UGazeInteractorComponent::UGazeInteractorComponent()
 {
-    PrimaryComponentTick.bCanEverTick = true;
-    SetIsReplicatedByDefault(true);
+	PrimaryComponentTick.bCanEverTick = true;
 
-    TraceDistance = 800.f;
-    TraceChannel = ECC_Visibility;
-    CurrentTargetActor = nullptr;
-    CurrentSetIndex = INDEX_NONE;
-    bDrawDebugLine = true;
-    bOnlyLocal = true;
-    CurrentWidgetComp = nullptr;
+	TraceDistance = 800.f;
+	GazeSweepSteps = 8;
+	ComponentDetectRadius = 40.f;
+	PlayerOverlapRadius = 200.f;
+
+	TraceChannel = ECC_Visibility;
+
+	CurrentTargetActor = nullptr;
+	CurrentSetIndex = INDEX_NONE;
+	CurrentWidgetComp = nullptr;
+
+	bDrawDebugLine = false;
+	bOnlyLocal = true;
 }
 
 void UGazeInteractorComponent::BeginPlay()
 {
-    Super::BeginPlay();
+	Super::BeginPlay();
 }
 
 void UGazeInteractorComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    HideCurrentWidget();
-    Super::EndPlay(EndPlayReason);
+	HideCurrentWidget();
+
+	// 후보 위젯 정리
+	for (TPair<TWeakObjectPtr<AActor>, UWidgetComponent*>& Pair : CandidateWidgetMap)
+	{
+		if (Pair.Value)
+		{
+			Pair.Value->DestroyComponent();
+		}
+	}
+	CandidateWidgetMap.Empty();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UGazeInteractorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    // 로컬 클라만 감지하도록 한 경우면 여기서 걸러줌
-    if (bOnlyLocal && !IsOwnerLocal())
-    {
-        return;
-    }
+	if (bOnlyLocal && !IsOwnerLocal())
+	{
+		return;
+	}
 
-    PerformGazeTrace();
-
-    // 위젯이 살아있으면 카메라 쪽으로 보게 만든다
-    if (CurrentWidgetComp && IsOwnerLocal())
-    {
-        AActor* Owner = GetOwner();
-        if (Owner)
-        {
-            if (UCameraComponent* Cam = Owner->FindComponentByClass<UCameraComponent>())
-            {
-                const FVector CamLoc = Cam->GetComponentLocation();
-                const FVector WidgetLoc = CurrentWidgetComp->GetComponentLocation();
-
-                FVector ToCam = CamLoc - WidgetLoc;
-                ToCam.Normalize();
-
-                // 위아래도 따라가게 하려면 이 줄 빼기
-                // ToCam.Z = 0.f;
-
-                const FRotator FaceRot = ToCam.Rotation();
-                CurrentWidgetComp->SetWorldRotation(FaceRot);
-            }
-        }
-    }
+	PerformGazeTrace();
 }
 
 bool UGazeInteractorComponent::IsOwnerLocal() const
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return false;
-    }
+	const APawn* PawnOwner = Cast<APawn>(GetOwner());
+	if (!PawnOwner) return true;
 
-    AController* Ctrl = Owner->GetInstigatorController();
-    APlayerController* PC = Cast<APlayerController>(Ctrl);
-    return (PC && PC->IsLocalController());
+	const APlayerController* PC = Cast<APlayerController>(PawnOwner->GetController());
+	return (PC && PC->IsLocalController());
 }
 
 void UGazeInteractorComponent::PerformGazeTrace()
 {
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return;
-    }
+	AActor* Owner = GetOwner();
+	if (!Owner)
+		return;
 
-    UCameraComponent* CameraComp = Owner->FindComponentByClass<UCameraComponent>();
-    if (!CameraComp)
-    {
-        return;
-    }
+	UCameraComponent* CameraComp = Owner->FindComponentByClass<UCameraComponent>();
+	if (!CameraComp)
+		return;
 
-    const FVector Start = CameraComp->GetComponentLocation();
-    const FVector End = Start + CameraComp->GetComponentRotation().Vector() * TraceDistance;
+	const FVector Start = CameraComp->GetComponentLocation();
+	const FVector Forward = CameraComp->GetComponentRotation().Vector();
+	const FVector End = Start + Forward * TraceDistance;
 
-    FHitResult Hit;
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(Owner);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(Gaze), false, Owner);
 
-    const bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, Params);
+	if (bDrawDebugLine)
+	{
+		DrawDebugLine(GetWorld(), Start, End, FColor::Yellow, false, 0.f, 0, 1.5f);
+	}
 
-#if WITH_EDITOR
-    if (bDrawDebugLine)
-    {
-        DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 0.f, 0, 1.5f);
-    }
-#endif
+	// 1단계/2단계에서 모은 후보들
+	TArray<FGazeCandidate> AllCandidates;
+	FGazeCandidate BestCandidate;
+	BestCandidate.Actor = nullptr;
+	BestCandidate.SetIndex = INDEX_NONE;
+	BestCandidate.DistSqFromView = TNumericLimits<float>::Max();
 
-    if (bHit && Hit.GetActor())
-    {
-        AActor* HitActor = Hit.GetActor();
-        int32 MatchedSet = FindMatchedSetIndex(HitActor);
-        if (MatchedSet != INDEX_NONE)
-        {
-            // 다른 애를 봤거나, 같은 애인데 다른 세트면 UI 갱신
-            if (HitActor != CurrentTargetActor || MatchedSet != CurrentSetIndex)
-            {
-                ShowWidgetForSet(HitActor, MatchedSet);
-            }
+	// 1) 시선 따라 여러 구간 스윕
+	CollectCandidatesAlongGaze(Start, Forward, AllCandidates, BestCandidate, Params);
 
-            // 인터랙트용 캐시
-            CurrentTargetActor = HitActor;
-            CurrentSetIndex = MatchedSet;
-            CurrentMatchedComponent = nullptr;
+	// 2) 시선에서 못 찾았다면 플레이어 주변 오버랩
+	if (!BestCandidate.Actor.IsValid())
+	{
+		CollectCandidatesAroundPlayer(Owner->GetActorLocation(), AllCandidates, BestCandidate, Params);
+	}
 
-            // 실제로 맞은 컴포넌트도 기억해두고 싶으면 여기서 찾음
-            const FGazeDetectSet& Set = DetectSets[MatchedSet];
-            TArray<UActorComponent*> ActorComps = HitActor->GetComponents().Array();
-            for (UActorComponent* Comp : ActorComps)
-            {
-                if (Comp && Comp->IsA(Set.TargetComponentClass))
-                {
-                    CurrentMatchedComponent = Comp;
-                    break;
-                }
-            }
+	// 최종 적용
+	if (BestCandidate.Actor.IsValid() && BestCandidate.SetIndex != INDEX_NONE)
+	{
+		// 타깃 위젯 갱신
+		if (BestCandidate.Actor.Get() != CurrentTargetActor || BestCandidate.SetIndex != CurrentSetIndex)
+		{
+			ShowWidgetForSet(BestCandidate.Actor.Get(), BestCandidate.SetIndex);
+		}
+		CurrentTargetActor = BestCandidate.Actor.Get();
+		CurrentSetIndex = BestCandidate.SetIndex;
+	}
+	else
+	{
+		// 타깃이 없다
+		HideCurrentWidget();
+		CurrentTargetActor = nullptr;
+		CurrentSetIndex = INDEX_NONE;
+	}
 
-            return; // 감지 성공했으므로 종료
-        }
-    }
-
-    // 못 맞췄으면 초기화
-    HideCurrentWidget();
-    CurrentTargetActor = nullptr;
-    CurrentSetIndex = INDEX_NONE;
-    CurrentMatchedComponent = nullptr;
+	// 후보 UI 갱신 (타깃 제외하고)
+	UpdateCandidateWidgets(AllCandidates, BestCandidate);
 }
 
-int32 UGazeInteractorComponent::FindMatchedSetIndex(AActor* Actor) const
+void UGazeInteractorComponent::CollectCandidatesAlongGaze(const FVector& Start, const FVector& Forward, TArray<FGazeCandidate>& InOutCandidates, FGazeCandidate& InOutBest, const FCollisionQueryParams& Params)
 {
-    if (!Actor)
-    {
-        return INDEX_NONE;
-    }
+	const float StepSize = TraceDistance / FMath::Max(1, GazeSweepSteps);
 
-    TArray<UActorComponent*> ActorComps = Actor->GetComponents().Array();
+	for (int32 i = 1; i <= GazeSweepSteps; ++i)
+	{
+		const FVector Center = Start + Forward * (StepSize * i);
 
-    for (int32 i = 0; i < DetectSets.Num(); ++i)
-    {
-        const FGazeDetectSet& Set = DetectSets[i];
-        if (!*Set.TargetComponentClass)
-        {
-            continue;
-        }
+		TArray<FHitResult> Hits;
+		const bool bHit = GetWorld()->SweepMultiByChannel(
+			Hits,
+			Center,
+			Center,
+			FQuat::Identity,
+			TraceChannel,
+			FCollisionShape::MakeSphere(ComponentDetectRadius),
+			Params
+		);
 
-        for (UActorComponent* Comp : ActorComps)
-        {
-            if (Comp && Comp->IsA(Set.TargetComponentClass))
-            {
-                return i;
-            }
-        }
-    }
+#if WITH_EDITOR
+		if (bDrawDebugLine)
+		{
+			DrawDebugSphere(GetWorld(), Center, ComponentDetectRadius, 8, bHit ? FColor::Green : FColor::Red, false, 0.f);
+		}
+#endif
 
-    return INDEX_NONE;
+		if (!bHit)
+		{
+			continue;
+		}
+
+		for (const FHitResult& H : Hits)
+		{
+			AActor* HitActor = H.GetActor();
+			if (!HitActor) continue;
+
+			UActorComponent* MatchedComp = nullptr;
+			int32 SetIndex = INDEX_NONE;
+			if (!FindMatchedComponentInActor(HitActor, MatchedComp, SetIndex))
+			{
+				continue;
+			}
+
+			// 중복 후보 체크
+			bool bAlreadyAdded = false;
+			for (const FGazeCandidate& C : InOutCandidates)
+			{
+				if (C.Actor.Get() == HitActor)
+				{
+					bAlreadyAdded = true;
+					break;
+				}
+			}
+			if (bAlreadyAdded)
+				continue;
+
+			FGazeCandidate NewCand;
+			NewCand.Actor = HitActor;
+			NewCand.SetIndex = SetIndex;
+
+			FVector HitPos;
+			if (H.ImpactPoint.IsNearlyZero())
+			{
+				HitPos = HitActor->GetActorLocation();
+			}
+			else
+			{
+				HitPos = FVector(H.ImpactPoint);
+			}
+			NewCand.DistSqFromView = FVector::DistSquared(Start, HitPos);
+
+			InOutCandidates.Add(NewCand);
+
+			// 베스트 갱신 (시선에 가까운 놈 우선)
+			if (NewCand.DistSqFromView < InOutBest.DistSqFromView)
+			{
+				InOutBest = NewCand;
+			}
+		}
+	}
+}
+
+void UGazeInteractorComponent::CollectCandidatesAroundPlayer(const FVector& Origin, TArray<FGazeCandidate>& InOutCandidates, FGazeCandidate& InOutBest, const FCollisionQueryParams& Params)
+{
+	TArray<FOverlapResult> Overlaps;
+
+	bool bAny = GetWorld()->OverlapMultiByChannel(
+		Overlaps,
+		Origin,
+		FQuat::Identity,
+		TraceChannel,
+		FCollisionShape::MakeSphere(PlayerOverlapRadius),
+		Params
+	);
+
+#if WITH_EDITOR
+	if (bDrawDebugLine)
+	{
+		DrawDebugSphere(GetWorld(), Origin, PlayerOverlapRadius, 12, bAny ? FColor::Cyan : FColor::Blue, false, 0.f);
+	}
+#endif
+
+	if (!bAny)
+		return;
+
+	for (const FOverlapResult& O : Overlaps)
+	{
+		AActor* HitActor = O.GetActor();
+		if (!HitActor) continue;
+
+		UActorComponent* MatchedComp = nullptr;
+		int32 SetIndex = INDEX_NONE;
+		if (!FindMatchedComponentInActor(HitActor, MatchedComp, SetIndex))
+		{
+			continue;
+		}
+
+		// 이미 후보에 있으면 스킵
+		bool bAlreadyAdded = false;
+		for (const FGazeCandidate& C : InOutCandidates)
+		{
+			if (C.Actor.Get() == HitActor)
+			{
+				bAlreadyAdded = true;
+				break;
+			}
+		}
+		if (bAlreadyAdded)
+			continue;
+
+		FGazeCandidate NewCand;
+		NewCand.Actor = HitActor;
+		NewCand.SetIndex = SetIndex;
+		NewCand.DistSqFromView = FVector::DistSquared(Origin, HitActor->GetActorLocation());
+
+		InOutCandidates.Add(NewCand);
+
+		// 아직 베스트가 없으면 이것도 베스트가 될 수 있음
+		if (!InOutBest.Actor.IsValid() || NewCand.DistSqFromView < InOutBest.DistSqFromView)
+		{
+			InOutBest = NewCand;
+		}
+	}
+}
+
+bool UGazeInteractorComponent::FindMatchedComponentInActor(AActor* Actor, UActorComponent*& OutMatchedComp, int32& OutSetIndex) const
+{
+	OutMatchedComp = nullptr;
+	OutSetIndex = INDEX_NONE;
+
+	if (!Actor)
+		return false;
+
+	for (int32 i = 0; i < DetectSets.Num(); ++i)
+	{
+		const FGazeDetectSet& Set = DetectSets[i];
+		if (!*Set.TargetComponentClass)
+			continue;
+
+		UActorComponent* Found = Actor->FindComponentByClass(Set.TargetComponentClass);
+		if (Found)
+		{
+			OutMatchedComp = Found;
+			OutSetIndex = i;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void UGazeInteractorComponent::ShowWidgetForSet(AActor* TargetActor, int32 SetIndex)
 {
-    if (!TargetActor || !DetectSets.IsValidIndex(SetIndex))
-    {
-        HideCurrentWidget();
-        return;
-    }
+	HideCurrentWidget();
 
-    // 로컬 UI만 띄울 거면 여기서도 체크
-    if (bOnlyLocal && !IsOwnerLocal())
-    {
-        return;
-    }
+	if (!TargetActor || !DetectSets.IsValidIndex(SetIndex))
+		return;
 
-    // 기존 위젯 제거
-    HideCurrentWidget();
+	const FGazeDetectSet& Set = DetectSets[SetIndex];
+	if (!*Set.WidgetClass)
+		return;
 
-    const FGazeDetectSet& Set = DetectSets[SetIndex];
-    if (!*Set.WidgetClass)
-    {
-        return; // 이 세트는 UI 안 띄움
-    }
-
-    // 타겟 액터에 위젯 컴포넌트를 동적으로 붙인다
-    UWidgetComponent* NewWidgetComp = NewObject<UWidgetComponent>(TargetActor);
-    if (!NewWidgetComp)
-    {
-        return;
-    }
-
-    NewWidgetComp->RegisterComponent();
-    NewWidgetComp->SetWidgetSpace(EWidgetSpace::World);
-    NewWidgetComp->SetWidgetClass(Set.WidgetClass);
-    NewWidgetComp->SetDrawSize(FVector2D(300.f, 100.f)); // 필요하면 세트에다 빼기
-    NewWidgetComp->SetTwoSided(true);
-
-    // 그림자 안 생기게
-    NewWidgetComp->SetCastShadow(false);
-    NewWidgetComp->SetReceivesDecals(false);
-
-    // 붙일 위치 (액터 머리 위 정도)
-    USceneComponent* AttachComp = TargetActor->GetRootComponent();
-    if (AttachComp)
-    {
-        NewWidgetComp->AttachToComponent(AttachComp, FAttachmentTransformRules::KeepRelativeTransform);
-        NewWidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
-    }
-
-    CurrentWidgetComp = NewWidgetComp;
+	CurrentWidgetComp = SpawnWidgetOnActor(TargetActor, Set.WidgetClass);
 }
 
 void UGazeInteractorComponent::HideCurrentWidget()
 {
-    if (CurrentWidgetComp)
-    {
-        CurrentWidgetComp->DestroyComponent();
-        CurrentWidgetComp = nullptr;
-    }
+	if (CurrentWidgetComp)
+	{
+		CurrentWidgetComp->DestroyComponent();
+		CurrentWidgetComp = nullptr;
+	}
+}
+
+UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(AActor* TargetActor, TSubclassOf<UUserWidget> WidgetClass) const
+{
+	if (!TargetActor || !*WidgetClass)
+		return nullptr;
+
+	UWidgetComponent* WidgetComp = NewObject<UWidgetComponent>(TargetActor);
+	if (!WidgetComp)
+		return nullptr;
+
+	WidgetComp->RegisterComponent();
+	WidgetComp->SetWidgetClass(WidgetClass);
+	WidgetComp->SetDrawAtDesiredSize(true);
+	WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+	WidgetComp->AttachToComponent(TargetActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	WidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // 머리 위
+	return WidgetComp;
+}
+
+void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidate>& Candidates, const FGazeCandidate& FinalTarget)
+{
+	// 이번 틱에 살아있는 액터 목록
+	TSet<TWeakObjectPtr<AActor>> ThisFrameActors;
+
+	for (const FGazeCandidate& C : Candidates)
+	{
+		// 타깃은 후보 위젯 안 만듦
+		if (FinalTarget.Actor.IsValid() && C.Actor == FinalTarget.Actor)
+			continue;
+
+		ThisFrameActors.Add(C.Actor);
+
+		AActor* Actor = C.Actor.Get();
+		if (!Actor) continue;
+
+		// 해당 세트가 후보 위젯을 지정했는지
+		if (!DetectSets.IsValidIndex(C.SetIndex))
+			continue;
+
+		const FGazeDetectSet& Set = DetectSets[C.SetIndex];
+		if (!*Set.CandidateWidgetClass)
+			continue;
+
+		// 이미 있으면 패스
+		if (UWidgetComponent** FoundPtr = CandidateWidgetMap.Find(Actor))
+		{
+			// 있으면 위치만 갱신해도 됨
+			if (UWidgetComponent* Found = *FoundPtr)
+			{
+				Found->SetRelativeLocation(FVector(0.f, 0.f, 120.f));
+			}
+		}
+		else
+		{
+			// 새로 생성
+			UWidgetComponent* NewWidget = SpawnWidgetOnActor(Actor, Set.CandidateWidgetClass);
+			if (NewWidget)
+			{
+				CandidateWidgetMap.Add(Actor, NewWidget);
+			}
+		}
+	}
+
+	// 이번 프레임에 없어진 애들 제거
+	TArray<TWeakObjectPtr<AActor>> ToRemove;
+	for (const TPair<TWeakObjectPtr<AActor>, UWidgetComponent*>& Pair : CandidateWidgetMap)
+	{
+		if (!ThisFrameActors.Contains(Pair.Key))
+		{
+			if (Pair.Value)
+			{
+				Pair.Value->DestroyComponent();
+			}
+			ToRemove.Add(Pair.Key);
+		}
+	}
+
+	for (const TWeakObjectPtr<AActor>& Key : ToRemove)
+	{
+		CandidateWidgetMap.Remove(Key);
+	}
 }
 
 void UGazeInteractorComponent::TryInteract(AActor* InstigatorActor)
 {
-    if (!InstigatorActor)
-    {
-        return;
-    }
+	// 현재 타깃이 없으면 끝
+	if (!CurrentTargetActor || CurrentSetIndex == INDEX_NONE)
+	{
+		return;
+	}
 
-    if (!CurrentTargetActor || CurrentSetIndex == INDEX_NONE)
-    {
-        return; // 볼 대상 없으면 종료
-    }
-
-    // 서버면 바로 처리
-    if (InstigatorActor->HasAuthority())
-    {
-        ProcessInteract(InstigatorActor, CurrentTargetActor, CurrentSetIndex);
-    }
-    else
-    {
-        // 클라이언트면 서버로 요청
-        ServerTryInteract(InstigatorActor, CurrentTargetActor, CurrentSetIndex);
-    }
+	// 로컬에서 바로도 처리하고 싶으면 여기서 ProcessInteract 호출해도 되지만
+	// 보통은 서버 권한으로 하니까 서버 RPC 부름
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		ProcessInteract(InstigatorActor, CurrentTargetActor, CurrentSetIndex);
+	}
+	else
+	{
+		ServerTryInteract(InstigatorActor, CurrentTargetActor, CurrentSetIndex);
+	}
 }
 
 void UGazeInteractorComponent::ServerTryInteract_Implementation(AActor* InstigatorActor, AActor* TargetActor, int32 SetIndex)
 {
-    ProcessInteract(InstigatorActor, TargetActor, SetIndex);
+	ProcessInteract(InstigatorActor, TargetActor, SetIndex);
 }
 
 void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* TargetActor, int32 SetIndex)
 {
-    if (!InstigatorActor || !TargetActor)
-    {
-        return;
-    }
+	if (!TargetActor)
+	{
+		return;
+	}
 
-    // 1) 액터가 인터페이스 구현했으면 그걸 먼저
-    if (TargetActor->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
-    {
-        IGazeInteractableInterface::Execute_Interact(TargetActor, InstigatorActor);
-        return;
-    }
+	if (!DetectSets.IsValidIndex(SetIndex))
+	{
+		return;
+	}
 
-    // 2) 세트에 맞는 컴포넌트를 찾아서 인터페이스 호출
-    if (DetectSets.IsValidIndex(SetIndex))
-    {
-        const FGazeDetectSet& Set = DetectSets[SetIndex];
-        TArray<UActorComponent*> ActorComps = TargetActor->GetComponents().Array();
-        for (UActorComponent* Comp : ActorComps)
-        {
-            if (!Comp)
-            {
-                continue;
-            }
+	const FGazeDetectSet& Set = DetectSets[SetIndex];
 
-            // 세트에서 지정한 컴포넌트 타입과 맞거나, 세트가 비어있으면 그냥 인터페이스 검사
-            if (!*Set.TargetComponentClass || Comp->IsA(Set.TargetComponentClass))
-            {
-                if (Comp->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
-                {
-                    IGazeInteractableInterface::Execute_Interact(Comp, InstigatorActor);
-                    break;
-                }
-            }
-        }
-    }
+	// 1) 우선 세트에 정의된 컴포넌트를 이 액터에서 다시 찾는다
+	UActorComponent* TargetComp = nullptr;
+	if (*Set.TargetComponentClass)
+	{
+		TargetComp = TargetActor->FindComponentByClass(Set.TargetComponentClass);
+	}
+
+	// 2) 컴포넌트가 인터페이스를 구현했다면 그쪽을 먼저 호출
+	if (TargetComp && TargetComp->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
+	{
+		IGazeInteractableInterface::Execute_Interact(TargetComp, InstigatorActor);
+		return;
+	}
+
+	// 3) 아니면 액터 자체가 인터페이스 구현했는지 확인
+	if (TargetActor->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
+	{
+		IGazeInteractableInterface::Execute_Interact(TargetActor, InstigatorActor);
+		return;
+	}
+
+	// 4) 둘 다 없으면 아무것도 안 함 (로그 찍어도 됨)
+	// UE_LOG(LogTemp, Warning, TEXT("ProcessInteract: Target has no GazeInteractableInterface"));
 }

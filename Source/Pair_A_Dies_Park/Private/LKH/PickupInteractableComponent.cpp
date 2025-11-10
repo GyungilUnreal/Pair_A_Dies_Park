@@ -8,10 +8,6 @@ UPickupInteractableComponent::UPickupInteractableComponent()
 	// 기본값 설정
 	bCanBePickedUp = true;
 	AttachSocketName = TEXT("hand_r"); // 프로젝트에 맞게 소켓 이름을 맞춰주세요.
-
-	// 집기형 상호작용이므로 프롬프트를 바꿔둠
-	InteractionName = FText::FromString(TEXT("아이템"));
-	InteractionPrompt = FText::FromString(TEXT("집으려면 입력"));
 }
 
 void UPickupInteractableComponent::HandleInteract_Implementation(AActor* Interactor)
