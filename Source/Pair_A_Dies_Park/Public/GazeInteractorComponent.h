@@ -67,6 +67,11 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerTryInteract(AActor* InstigatorActor, AActor* TargetActor, int32 SetIndex);
 
+	// 어떤 액터가 "나 인터랙트 끝났다" 라고 방송했을 때 불리는 헬퍼
+	void ClearIfCurrentTarget(AActor* TargetActor, int32 SetIndex);
+
+	void ClearCandidateForTarget(AActor* TargetActor);
+
 protected:
 	void PerformGazeTrace();
 

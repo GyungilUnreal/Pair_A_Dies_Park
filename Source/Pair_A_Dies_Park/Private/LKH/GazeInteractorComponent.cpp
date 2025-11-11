@@ -1,6 +1,7 @@
 #include "GazeInteractorComponent.h"
 #include "GazeInteractableInterface.h"
 #include "GazeTextTargetComponent.h"
+#include "GazeInteractableComponent.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
@@ -9,6 +10,7 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "Components/TextBlock.h"
+#include "Kismet/GameplayStatics.h"
 
 UGazeInteractorComponent::UGazeInteractorComponent()
 {
@@ -329,7 +331,10 @@ void UGazeInteractorComponent::HideCurrentWidget()
 	}
 }
 
-UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(AActor* TargetActor, TSubclassOf<UUserWidget> WidgetClass) const
+UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(
+	AActor* TargetActor,
+	TSubclassOf<UUserWidget> WidgetClass
+) const
 {
 	if (!TargetActor || !*WidgetClass)
 		return nullptr;
@@ -344,8 +349,51 @@ UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(AActor* TargetAct
 	WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
 	WidgetComp->AttachToComponent(TargetActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 	WidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // 머리 위
+
+	// 여기부터: 이 클라이언트의 로컬플레이어들 중에서
+	//   "1P pawn 있으면 1P", 아니면 "2P pawn 있으면 2P" 고르기
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		if (UGameInstance* GI = World->GetGameInstance())
+		{
+			const TArray<ULocalPlayer*>& LocalPlayers = GI->GetLocalPlayers();
+			ULocalPlayer* ChosenLocalPlayer = nullptr;
+
+			// 1P 우선
+			if (LocalPlayers.Num() >= 1)
+			{
+				if (APlayerController* PC1 = LocalPlayers[0]->GetPlayerController(World))
+				{
+					if (APawn* P1 = PC1->GetPawn())
+					{
+						ChosenLocalPlayer = LocalPlayers[0];
+					}
+				}
+			}
+
+			// 1P가 없고 2P가 있으면 2P
+			if (!ChosenLocalPlayer && LocalPlayers.Num() >= 2)
+			{
+				if (APlayerController* PC2 = LocalPlayers[1]->GetPlayerController(World))
+				{
+					if (APawn* P2 = PC2->GetPawn())
+					{
+						ChosenLocalPlayer = LocalPlayers[1];
+					}
+				}
+			}
+
+			if (ChosenLocalPlayer)
+			{
+				WidgetComp->SetOwnerPlayer(ChosenLocalPlayer);
+			}
+		}
+	}
+
 	return WidgetComp;
 }
+
 
 void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidate>& Candidates, const FGazeCandidate& FinalTarget)
 {
@@ -413,14 +461,9 @@ void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidat
 
 void UGazeInteractorComponent::TryInteract(AActor* InstigatorActor)
 {
-	// 현재 타깃이 없으면 끝
 	if (!CurrentTargetActor || CurrentSetIndex == INDEX_NONE)
-	{
 		return;
-	}
 
-	// 로컬에서 바로도 처리하고 싶으면 여기서 ProcessInteract 호출해도 되지만
-	// 보통은 서버 권한으로 하니까 서버 RPC 부름
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		ProcessInteract(InstigatorActor, CurrentTargetActor, CurrentSetIndex);
@@ -443,14 +486,14 @@ void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* 
 
 	const FGazeDetectSet& Set = DetectSets[SetIndex];
 
-	// 대상 컴포넌트 찾기
+	// 1) 대상 컴포넌트 찾기
 	UActorComponent* TargetComp = nullptr;
 	if (*Set.TargetComponentClass)
 	{
 		TargetComp = TargetActor->FindComponentByClass(Set.TargetComponentClass);
 	}
 
-	// 인터페이스 호출
+	// 2) 실제 인터랙트 호출 (기존 코드)
 	if (TargetComp && TargetComp->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
 	{
 		IGazeInteractableInterface::Execute_Interact(TargetComp, InstigatorActor);
@@ -460,20 +503,10 @@ void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* 
 		IGazeInteractableInterface::Execute_Interact(TargetActor, InstigatorActor);
 	}
 
-	// 여기서 UI 정리
-	HideCurrentWidget();
-	CurrentTargetActor = nullptr;
-	CurrentSetIndex = INDEX_NONE;
-
-	// 후보 위젯들도 정리
-	for (auto& Pair : CandidateWidgetMap)
+	if (UGazeInteractableComponent* GI = TargetActor->FindComponentByClass<UGazeInteractableComponent>())
 	{
-		if (Pair.Value)
-		{
-			Pair.Value->DestroyComponent();
-		}
+		GI->NotifyGazeInteracted(InstigatorActor, SetIndex);
 	}
-	CandidateWidgetMap.Empty();
 }
 
 void UGazeInteractorComponent::ApplyGazeTextIfAny(AActor* TargetActor, UWidgetComponent* WidgetComp)
@@ -516,5 +549,30 @@ void UGazeInteractorComponent::ApplyGazeTextIfAny(AActor* TargetActor, UWidgetCo
 		{
 			RootText->SetText(TextComp->DisplayText);
 		}
+	}
+}
+
+void UGazeInteractorComponent::ClearIfCurrentTarget(AActor* TargetActor, int32 SetIndex)
+{
+	if (CurrentTargetActor == TargetActor && CurrentSetIndex == SetIndex)
+	{
+		HideCurrentWidget();
+		CurrentTargetActor = nullptr;
+		CurrentSetIndex = INDEX_NONE;
+		CurrentMatchedComponent = nullptr;
+	}
+}
+
+void UGazeInteractorComponent::ClearCandidateForTarget(AActor* TargetActor)
+{
+	if (UWidgetComponent* const* FoundWidgetComp = CandidateWidgetMap.Find(TargetActor))
+	{
+		if (UWidgetComponent* WidgetComp = *FoundWidgetComp)
+		{
+			// 월드 상에서 위젯 컴포넌트를 제거
+			WidgetComp->DestroyComponent();
+		}
+
+		CandidateWidgetMap.Remove(TargetActor);
 	}
 }
