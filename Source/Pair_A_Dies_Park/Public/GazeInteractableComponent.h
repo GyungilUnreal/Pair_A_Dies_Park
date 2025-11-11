@@ -6,9 +6,11 @@
 
 class UGazeInteractorComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGazeInteractedSignature, AActor*, InstigatorActor, int32, SetIndex);
+
 /**
- * ÀÌ ÄÄÆ÷³ÍÆ®¸¦ °¡Áø ¾×ÅÍ°¡ ½Ã¼± ÀÎÅÍ·¢Æ®µÇ¸é
- * ¼­¹ö¿¡¼­ ¸ÖÆ¼Ä³½ºÆ®·Î ¸ğµç Å¬¶ó¿¡ "ÀÌ ¾×ÅÍ¿¡ ´ëÇÑ À§Á¬ ³»·Á"¶ó°í ¾Ë¸°´Ù.
+ * ì´ ì»´í¬ë„ŒíŠ¸ë¥¼ ê°€ì§„ ì•¡í„°ê°€ ì‹œì„  ì¸í„°ë™íŠ¸ë˜ë©´
+ * ì„œë²„ì—ì„œ ë©€í‹°ìºìŠ¤íŠ¸ë¡œ ëª¨ë“  í´ë¼ì— "ì´ ì•¡í„°ì— ëŒ€í•œ ìœ„ì ¯ ë‚´ë ¤"ë¼ê³  ì•Œë¦°ë‹¤.
  */
 UCLASS(ClassGroup = (Gaze), meta = (BlueprintSpawnableComponent))
 class UGazeInteractableComponent : public UActorComponent
@@ -18,16 +20,45 @@ class UGazeInteractableComponent : public UActorComponent
 public:
 	UGazeInteractableComponent();
 
-	/** ¼­¹ö¿¡¼­ È£ÃâÇØ: ÀÌ ¾×ÅÍ°¡ Áö±İ ½Ã¼± ÀÎÅÍ·¢Æ® µÇ¾ú´Ù°í ¾Ë¸² */
-	UFUNCTION(BlueprintCallable, Category = "Gaze")
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+public:
+	/** ì„œë²„ì—ì„œë§Œ í˜¸ì¶œ: ì´ ì•¡í„°ê°€ ì§€ê¸ˆ ì‹œì„  ì¸í„°ë™íŠ¸ ë˜ì—ˆë‹¤ê³  ì•Œë¦¼ */
+	UFUNCTION()
 	void NotifyGazeInteracted(AActor* InstigatorActor, int32 SetIndex);
 
+	/** BPì—ì„œ ë°”ì¸ë”© ê°€ëŠ¥í•œ ì´ë²¤íŠ¸ */
+	UPROPERTY(BlueprintAssignable, Category = "Gaze")
+	FOnGazeInteractedSignature OnGazeInteracted;
+
+	// í…ìŠ¤íŠ¸ ê°±ì‹ ìš©: í´ë¼ì—ì„œë„ ë¶€ë¥¼ ìˆ˜ ìˆê²Œ Server RPCë¡œ ì—´ì–´ì¤€ë‹¤
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Gaze")
+	void Server_RefreshGazeText();
+
+	// ì‹¤ì œë¡œ ê° í´ë¼ì˜ GazeInteractorë“¤ì„ í›‘ì–´ì„œ í…ìŠ¤íŠ¸ ë‹¤ì‹œ ì ìš©ì‹œí‚¤ëŠ” ë©€í‹°ìºìŠ¤íŠ¸
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_RefreshGazeText();
+
 protected:
-	/** ¸ğµç Å¬¶ó¿¡¼­ È£ÃâµÅ¼­ ½ÇÁ¦·Î UI ³»¸®´Â ºÎºĞ */
+	/** ëª¨ë“  í´ë¼ì—ì„œ í˜¸ì¶œë¼ì„œ ì‹¤ì œë¡œ UI ë‚´ë¦¬ëŠ” ë¶€ë¶„ */
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_NotifyGazeInteracted(AActor* InstigatorActor, int32 SetIndex);
 
-	/** BP¿¡¼­ ÈÄÅ·ÇÏ°í ½ÍÀ¸¸é ¿©±â ±¸ÇöÇØ¼­ ¾²¸é µÊ */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Gaze")
-	void OnGazeInteracted(AActor* InstigatorActor, int32 SetIndex);
+public:
+	UFUNCTION(BlueprintCallable, Category = "Gaze")
+	void SetIsInteractable(bool bNew);
+
+	UFUNCTION(BlueprintCallable, Category = "Gaze")
+	bool GetIsInteractable() const { return bIsInteractable; }
+
+protected:
+	UFUNCTION()
+	void OnRep_IsInteractable();
+
+	void HandleInteractableChanged();
+
+	// ì¸í„°ë™íŠ¸ ê°€ëŠ¥ ì—¬ë¶€
+	UPROPERTY(ReplicatedUsing = OnRep_IsInteractable)
+	bool bIsInteractable;
 };

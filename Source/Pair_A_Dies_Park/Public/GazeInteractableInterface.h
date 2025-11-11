@@ -19,6 +19,6 @@ class IGazeInteractableInterface
 public:
 	// 상호작용 시 호출되는 함수
 	// InstigatorActor: 상호작용을 시도한 플레이어(캐릭터)
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Gaze|Interact")
-	void Interact(AActor* InstigatorActor);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="GazeInterface|Interact")
+	void GazeInteract(AActor* InstigatorActor);
 };

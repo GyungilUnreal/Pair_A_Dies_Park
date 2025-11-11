@@ -287,6 +287,15 @@ bool UGazeInteractorComponent::FindMatchedComponentInActor(AActor* Actor, UActor
 	if (!Actor)
 		return false;
 
+	// 인터랙트 가능 여부 확인
+	if (UGazeInteractableComponent* InteractableComp = Actor->FindComponentByClass<UGazeInteractableComponent>())
+	{
+		if (!InteractableComp->GetIsInteractable())
+		{
+			return false; // 시선에 안 잡히게 함
+		}
+	}
+
 	for (int32 i = 0; i < DetectSets.Num(); ++i)
 	{
 		const FGazeDetectSet& Set = DetectSets[i];
@@ -316,9 +325,8 @@ void UGazeInteractorComponent::ShowWidgetForSet(AActor* TargetActor, int32 SetIn
 	if (!*Set.WidgetClass)
 		return;
 
-	CurrentWidgetComp = SpawnWidgetOnActor(TargetActor, Set.WidgetClass);
+	CurrentWidgetComp = SpawnWidgetOnActor(TargetActor, Set.WidgetClass, Set.MainWidgetOffset);
 
-	// 여기서 감지용 텍스트 컴포넌트를 찾아서 UI에 적용
 	ApplyGazeTextIfAny(TargetActor, CurrentWidgetComp);
 }
 
@@ -333,7 +341,8 @@ void UGazeInteractorComponent::HideCurrentWidget()
 
 UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(
 	AActor* TargetActor,
-	TSubclassOf<UUserWidget> WidgetClass
+	TSubclassOf<UUserWidget> WidgetClass,
+	const FVector& InOffset
 ) const
 {
 	if (!TargetActor || !*WidgetClass)
@@ -348,7 +357,7 @@ UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(
 	WidgetComp->SetDrawAtDesiredSize(true);
 	WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
 	WidgetComp->AttachToComponent(TargetActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-	WidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // 머리 위
+	WidgetComp->SetRelativeLocation(InOffset);
 
 	// 여기부터: 이 클라이언트의 로컬플레이어들 중에서
 	//   "1P pawn 있으면 1P", 아니면 "2P pawn 있으면 2P" 고르기
@@ -394,24 +403,24 @@ UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(
 	return WidgetComp;
 }
 
-
 void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidate>& Candidates, const FGazeCandidate& FinalTarget)
 {
-	// 이번 틱에 살아있는 액터 목록
+	// 이번 프레임에 살아있는 후보 액터들
 	TSet<TWeakObjectPtr<AActor>> ThisFrameActors;
 
 	for (const FGazeCandidate& C : Candidates)
 	{
-		// 타깃은 후보 위젯 안 만듦
+		// 최종 타깃은 후보 위젯 만들지 않는다
 		if (FinalTarget.Actor.IsValid() && C.Actor == FinalTarget.Actor)
+			continue;
+
+		AActor* Actor = C.Actor.Get();
+		if (!Actor)
 			continue;
 
 		ThisFrameActors.Add(C.Actor);
 
-		AActor* Actor = C.Actor.Get();
-		if (!Actor) continue;
-
-		// 해당 세트가 후보 위젯을 지정했는지
+		// 세트 유효성 검사
 		if (!DetectSets.IsValidIndex(C.SetIndex))
 			continue;
 
@@ -419,27 +428,31 @@ void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidat
 		if (!*Set.CandidateWidgetClass)
 			continue;
 
-		// 이미 있으면 패스
+		// 이미 후보 위젯이 있는지 확인
 		if (UWidgetComponent** FoundPtr = CandidateWidgetMap.Find(Actor))
 		{
-			// 있으면 위치만 갱신해도 됨
-			if (UWidgetComponent* Found = *FoundPtr)
+			if (UWidgetComponent* FoundWidget = *FoundPtr)
 			{
-				Found->SetRelativeLocation(FVector(0.f, 0.f, 120.f));
+				// 세트별 후보 오프셋으로 위치 정리
+				FoundWidget->SetRelativeLocation(Set.CandidateWidgetOffset);
+				// 필요하면 텍스트도 매 프레임 맞춰줌
+				ApplyGazeTextIfAny(Actor, FoundWidget);
 			}
 		}
 		else
 		{
-			// 새로 생성
-			UWidgetComponent* NewWidget = SpawnWidgetOnActor(Actor, Set.CandidateWidgetClass);
+			// 새 후보 위젯 생성 (세트별 후보 오프셋 사용)
+			UWidgetComponent* NewWidget = SpawnWidgetOnActor(Actor, Set.CandidateWidgetClass, Set.CandidateWidgetOffset);
 			if (NewWidget)
 			{
 				CandidateWidgetMap.Add(Actor, NewWidget);
+				// 새로 생긴 위젯에도 텍스트 적용
+				ApplyGazeTextIfAny(Actor, NewWidget);
 			}
 		}
 	}
 
-	// 이번 프레임에 없어진 애들 제거
+	// 이번 프레임에 없어진 후보들은 정리
 	TArray<TWeakObjectPtr<AActor>> ToRemove;
 	for (const TPair<TWeakObjectPtr<AActor>, UWidgetComponent*>& Pair : CandidateWidgetMap)
 	{
@@ -496,11 +509,11 @@ void UGazeInteractorComponent::ProcessInteract(AActor* InstigatorActor, AActor* 
 	// 2) 실제 인터랙트 호출 (기존 코드)
 	if (TargetComp && TargetComp->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
 	{
-		IGazeInteractableInterface::Execute_Interact(TargetComp, InstigatorActor);
+		IGazeInteractableInterface::Execute_GazeInteract(TargetComp, InstigatorActor);
 	}
 	else if (TargetActor->GetClass()->ImplementsInterface(UGazeInteractableInterface::StaticClass()))
 	{
-		IGazeInteractableInterface::Execute_Interact(TargetActor, InstigatorActor);
+		IGazeInteractableInterface::Execute_GazeInteract(TargetActor, InstigatorActor);
 	}
 
 	if (UGazeInteractableComponent* GI = TargetActor->FindComponentByClass<UGazeInteractableComponent>())
@@ -552,27 +565,59 @@ void UGazeInteractorComponent::ApplyGazeTextIfAny(AActor* TargetActor, UWidgetCo
 	}
 }
 
-void UGazeInteractorComponent::ClearIfCurrentTarget(AActor* TargetActor, int32 SetIndex)
+void UGazeInteractorComponent::RefreshTextForTargetActor(AActor* TargetActor)
 {
-	if (CurrentTargetActor == TargetActor && CurrentSetIndex == SetIndex)
+	// 메인 타깃 위젯 갱신
+	if (TargetActor && TargetActor == CurrentTargetActor && CurrentWidgetComp)
 	{
-		HideCurrentWidget();
-		CurrentTargetActor = nullptr;
-		CurrentSetIndex = INDEX_NONE;
-		CurrentMatchedComponent = nullptr;
+		ApplyGazeTextIfAny(TargetActor, CurrentWidgetComp);
+	}
+
+	// 후보 위젯도 갱신하고 싶으면 여기서도 해줄 수 있음
+	if (UWidgetComponent** Found = CandidateWidgetMap.Find(TargetActor))
+	{
+		if (UWidgetComponent* CandWidget = *Found)
+		{
+			ApplyGazeTextIfAny(TargetActor, CandWidget);
+		}
 	}
 }
 
-void UGazeInteractorComponent::ClearCandidateForTarget(AActor* TargetActor)
+void UGazeInteractorComponent::OnTargetInteractableStateChanged(AActor* TargetActor, bool bNewInteractable)
 {
-	if (UWidgetComponent* const* FoundWidgetComp = CandidateWidgetMap.Find(TargetActor))
-	{
-		if (UWidgetComponent* WidgetComp = *FoundWidgetComp)
-		{
-			// 월드 상에서 위젯 컴포넌트를 제거
-			WidgetComp->DestroyComponent();
-		}
+	if (!TargetActor)
+		return;
 
-		CandidateWidgetMap.Remove(TargetActor);
+	// 지금 내가 보고 있는 애가 이거면
+	if (TargetActor == CurrentTargetActor)
+	{
+		if (!bNewInteractable)
+		{
+			// 위젯 끄기
+			if (CurrentWidgetComp)
+			{
+				CurrentWidgetComp->SetVisibility(false, true);
+			}
+			// 필요하면 CurrentTargetActor도 풀어준다
+			// CurrentTargetActor = nullptr;
+		}
+		else
+		{
+			// 다시 켜질 수도 있으면 여기서 다시 텍스트 적용
+			if (CurrentWidgetComp)
+			{
+				ApplyGazeTextIfAny(TargetActor, CurrentWidgetComp);
+				CurrentWidgetComp->SetVisibility(true, true);
+			}
+		}
+	}
+
+	// 후보 맵에도 있을 수 있으니 한번 더 처리
+	if (UWidgetComponent** FoundWidget = CandidateWidgetMap.Find(TargetActor))
+	{
+		if (*FoundWidget)
+		{
+			(*FoundWidget)->SetVisibility(bNewInteractable, true);
+		}
 	}
 }

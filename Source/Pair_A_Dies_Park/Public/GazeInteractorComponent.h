@@ -25,7 +25,16 @@ struct FGazeDetectSet
 	// "너도 인터랙션 가능해" 라고 후보에게 보여줄 UI
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze")
 	TSubclassOf<UUserWidget> CandidateWidgetClass;
+
+	// 메인 위젯 오프셋
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze|UI")
+	FVector MainWidgetOffset = FVector(0.f, 0.f, 120.f);
+
+	// 후보 위젯 오프셋
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze|UI")
+	FVector CandidateWidgetOffset = FVector(0.f, 0.f, 120.f);
 };
+
 
 // 후보 정보
 USTRUCT()
@@ -45,7 +54,7 @@ struct FGazeCandidate
 	float DistSqFromView = 0.f;
 };
 
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (Gaze), meta = (BlueprintSpawnableComponent))
 class UGazeInteractorComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -67,10 +76,11 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerTryInteract(AActor* InstigatorActor, AActor* TargetActor, int32 SetIndex);
 
-	// 어떤 액터가 "나 인터랙트 끝났다" 라고 방송했을 때 불리는 헬퍼
-	void ClearIfCurrentTarget(AActor* TargetActor, int32 SetIndex);
+	// 현재 이 컴포넌트가 표시 중인 위젯이 TargetActor 것이면 텍스트를 다시 적용
+	UFUNCTION(BlueprintCallable, Category = "Gaze|UI")
+	void RefreshTextForTargetActor(AActor* TargetActor);
 
-	void ClearCandidateForTarget(AActor* TargetActor);
+	void OnTargetInteractableStateChanged(AActor* TargetActor, bool bNewInteractable);
 
 protected:
 	void PerformGazeTrace();
@@ -97,7 +107,11 @@ protected:
 	bool IsOwnerLocal() const;
 
 	// 액터에 위젯 컴포넌트 하나 붙이는 헬퍼
-	UWidgetComponent* SpawnWidgetOnActor(AActor* TargetActor, TSubclassOf<UUserWidget> WidgetClass) const;
+	UWidgetComponent* SpawnWidgetOnActor(
+		AActor* TargetActor,
+		TSubclassOf<UUserWidget> WidgetClass,
+		const FVector& InOffset = FVector::ZeroVector
+	) const;
 
 	// 감지된 액터에 붙은 텍스트 컴포넌트를 보고 위젯 글자를 바꿔주는 헬퍼
 	void ApplyGazeTextIfAny(AActor* TargetActor, UWidgetComponent* WidgetComp);

@@ -3,33 +3,45 @@
 #include "GameFramework/Pawn.h"
 #include "Engine/World.h"
 #include "GazeInteractorComponent.h"
+#include "Net/UnrealNetwork.h"
 
 UGazeInteractableComponent::UGazeInteractableComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
 	SetIsReplicatedByDefault(true);
+
+	bIsInteractable = true;
+}
+
+void UGazeInteractableComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UGazeInteractableComponent, bIsInteractable);
 }
 
 void UGazeInteractableComponent::NotifyGazeInteracted(AActor* InstigatorActor, int32 SetIndex)
 {
-	// º¸Åë ¼­¹ö¿¡¼­¸¸ ºÎ¸£µµ·Ï
-	if (GetOwner() && GetOwner()->HasAuthority())
+	if (AActor* Owner = GetOwner())
 	{
-		Multicast_NotifyGazeInteracted(InstigatorActor, SetIndex);
-	}
-	else
-	{
-		// ÇÊ¿äÇÏ¸é ¿©±â¼­ Server RPC Ãß°¡ÇØ¼­ ¼­¹ö·Î º¸³»°Ô ¸¸µé ¼öµµ ÀÖÀ½
+		if (Owner->HasAuthority())
+		{
+			Multicast_NotifyGazeInteracted(InstigatorActor, SetIndex);
+		}
+		else
+		{
+			// í´ë¼ì—ì„œ í˜¸ì¶œëœ ê²½ìš°ë©´ ì—¬ê¸°ì„œ ì„œë²„ RPC ë‚ ë¦¬ëŠ” ê±¸ë¡œ í™•ìž¥ ê°€ëŠ¥
+		}
 	}
 }
 
 void UGazeInteractableComponent::Multicast_NotifyGazeInteracted_Implementation(AActor* InstigatorActor, int32 SetIndex)
 {
-	// 1) BP¿ë ÀÌº¥Æ®
-	OnGazeInteracted(InstigatorActor, SetIndex);
+	// 1) BPì—ì„œ ë°”ì¸ë”©ëœ ë¸ë¦¬ê²Œì´íŠ¸ í˜¸ì¶œ
+	OnGazeInteracted.Broadcast(InstigatorActor, SetIndex);
 
-	// 2) ÀÌ Å¬¶ó¿¡ ÀÖ´Â ¸ðµç ÇÃ·¹ÀÌ¾î(1P, 2P ...)ÀÇ GazeInteractorComponent¸¦ ÈÈ¾î¼­
-	//    "³»°¡ Áö±Ý º¸°í ÀÖ´Â °Ô ÀÌ ¾×ÅÍ¿´À¸¸é À§Á¬ ³»·Á"¶ó°í ½ÃÅ²´Ù.
+	// 2) ê° í´ë¼ì˜ GazeInteractorComponent ê°±ì‹ 
 	UWorld* World = GetWorld();
 	if (!World)
 		return;
@@ -49,9 +61,73 @@ void UGazeInteractableComponent::Multicast_NotifyGazeInteracted_Implementation(A
 		UGazeInteractorComponent* GazeComp = Pawn->FindComponentByClass<UGazeInteractorComponent>();
 		if (!GazeComp)
 			continue;
+	}
+}
 
-		// GazeInteractorComponent¿¡ ¾Æ·¡¿¡¼­ ¸¸µå´Â ÇïÆÛ¸¦ È£Ãâ
-		GazeComp->ClearIfCurrentTarget(OwnerActor, SetIndex);
-		GazeComp->ClearCandidateForTarget(OwnerActor);
+void UGazeInteractableComponent::Server_RefreshGazeText_Implementation()
+{
+	// ì„œë²„ì—ì„œë§Œ ì‹¤í–‰ â†’ ì „íŒŒ
+	Multicast_RefreshGazeText();
+}
+
+void UGazeInteractableComponent::Multicast_RefreshGazeText_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+		return;
+
+	AActor* OwnerActor = GetOwner();
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
+			continue;
+
+		APawn* Pawn = PC->GetPawn();
+		if (!Pawn)
+			continue;
+
+		if (UGazeInteractorComponent* GazeComp = Pawn->FindComponentByClass<UGazeInteractorComponent>())
+		{
+			// ìš°ë¦¬ê°€ ì•žì—ì„œ ë§Œë“¤ì—ˆë˜ â€œì´ ì•¡í„° ìœ„ì ¯ì´ë©´ í…ìŠ¤íŠ¸ ë‹¤ì‹œ ë„£ì–´â€ í—¬í¼ë¥¼ ì—¬ê¸°ì„œ ë¶€ë¥¸ë‹¤ê³  ê°€ì •
+			GazeComp->RefreshTextForTargetActor(OwnerActor);
+		}
+	}
+}
+
+void UGazeInteractableComponent::SetIsInteractable(bool bNew)
+{
+	bIsInteractable = bNew;
+	HandleInteractableChanged();
+}
+
+void UGazeInteractableComponent::OnRep_IsInteractable()
+{
+	HandleInteractableChanged();
+}
+
+void UGazeInteractableComponent::HandleInteractableChanged()
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+		return;
+
+	UWorld* World = OwnerActor->GetWorld();
+	if (!World)
+		return;
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (APlayerController* PC = It->Get())
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (UGazeInteractorComponent* Gaze = Pawn->FindComponentByClass<UGazeInteractorComponent>())
+				{
+					Gaze->OnTargetInteractableStateChanged(OwnerActor, bIsInteractable);
+				}
+			}
+		}
 	}
 }
