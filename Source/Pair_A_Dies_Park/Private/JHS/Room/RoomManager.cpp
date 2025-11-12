@@ -83,7 +83,7 @@ void URoomManager::OnCompletedRoom(int32 CompletedRoomIndex)
 
 void URoomManager::LoadLevel(FRoomData RoomData)
 {
-	FName RoomName = RoomData.RoomTitle;
-	UE_LOG(LogTemp, Warning, TEXT("Loading room: %s"), *RoomName.ToString());
-	UGameplayStatics::OpenLevel(GetWorld(), RoomName);
+	FName _roomName = RoomData.RoomTitle;
+	UE_LOG(LogTemp, Warning, TEXT("Loading room: %s"), *_roomName.ToString());
+	GetWorld()->ServerTravel(*_roomName.ToString());
 }
