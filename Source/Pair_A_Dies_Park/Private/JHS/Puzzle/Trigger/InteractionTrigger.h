@@ -18,8 +18,5 @@ public:
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "Puzzle Trigger|Interaction")
-	void InteractActicate();
-
-	UFUNCTION(BlueprintCallable, Category = "Puzzle Trigger|Interaction")
-	void InteractDeacticate();
+	void InteractTrigger();
 };

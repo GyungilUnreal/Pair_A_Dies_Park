@@ -2,14 +2,13 @@
 
 
 #include "JHS/Room/RoomController.h"
+#include "JHS/GameControll/GameControlFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "JHS/GameControll/MyGameMode.h"
 #include "JHS/GameControll/MyGameInstance.h"
-#include "JHS/Room/RoomManager.h"
 #include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "JHS/Puzzle/Action/PuzzleActionBase.h"
-#include "CharacterFunctionLibrary.h"
 
 // Sets default values
 ARoomController::ARoomController()
@@ -39,7 +38,7 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 	// 룸 클리어 문
 	if (PuzzleKey == ROOM_CLEAR_DOOR_KEY)
 	{
-		_roomManager->OnCompletedRoom(_roomSequence);
+		_roomManager->OnCompletedRoom((int32)_roomType);
 		return;
 	}
 
@@ -81,45 +80,13 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 
 void ARoomController::InitializeRoomController()
 {
-	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!_gameMode)
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
+	TObjectPtr<AMyGameMode> _gameMode = nullptr;
+	if (!UGameControlFunctionLibrary::TryGetGameMode(_gameMode))
 		return;
-	}
 
-	_roomManager = _gameMode->GetRoomManager();
-	if (!_roomManager)
-	{
-		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
+	TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
+	if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
 		return;
-	}
-
-	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (!_gameInstance)
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
-		return;
-	}
-
-	_roomSequence = _gameInstance->GetCurrentRoomSequence();
-	UE_LOG(LogTemp, Warning, TEXT("Initialize Room %d"), _roomSequence);
-
-	// 플레이어 스케일
-	FRoomData _roomData = _gameInstance->GetRoomData(_roomSequence);
-	TArray<AActor*> _pawnArray;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), _pawnArray);
-	TObjectPtr<ACharacter> _player = nullptr;
-	for (AActor* _actor : _pawnArray)
-	{
-		_player = Cast<ACharacter>(_actor);
-		if (_player)
-		{
-
-			UCharacterFunctionLibrary::SetPlayerScale(_player, _roomData.PlayerScale);
-			UCharacterFunctionLibrary::SetCameraDistance(_player, _roomData.CameraDistance);
-		}
-	}
 
 	// 룸 클리어 문 트리거
 	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);

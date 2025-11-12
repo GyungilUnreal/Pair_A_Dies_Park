@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "JHS/Room/RoomDataTable.h"
+#include "JHS/Room/RoomManager.h"
 
 #include "RoomController.generated.h"
 
 class APuzzleTriggerBase;
 class APresenceTrigger;
 class APuzzleActionBase;
-class URoomManager;
 
 USTRUCT(BlueprintType)
 struct FPuzzleData
@@ -40,7 +40,7 @@ public:
 private:
 	TObjectPtr<class URoomManager> _roomManager = nullptr;
 
-	int32 _roomSequence = -1;
+	FRoomData _roomData;
 
 	const int32 PUZZLE_DATA_RATE = 100;
 
@@ -49,6 +49,9 @@ private:
 	TMap<int32, bool> _puzzleTriggerMap = TMap<int32, bool>();
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Room Data")
+	E_ROOM_TYPE _roomType;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room Controller|Puzzle")
 	TArray<FPuzzleData> _puzzleDataArray = TArray<FPuzzleData>();
 

@@ -10,12 +10,14 @@ AInteractionTrigger::AInteractionTrigger()
     PrimaryActorTick.bCanEverTick = false;
 }
 
-void AInteractionTrigger::InteractActicate()
+void AInteractionTrigger::InteractTrigger()
 {
-    OnTriggerEnter();
-}
-
-void AInteractionTrigger::InteractDeacticate()
-{
-    OnTriggerExit();
+    if (_isTriggered)
+    {
+        OnTriggerExit();
+    }
+    else
+    {
+        OnTriggerEnter();
+    }
 }

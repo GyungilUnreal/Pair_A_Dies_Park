@@ -7,6 +7,7 @@
 #include "MyGameMode.generated.h"
 
 class URoomManager;
+class UMyGameInstance;
 
 UCLASS()
 class AMyGameMode : public AGameMode

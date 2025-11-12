@@ -31,6 +31,9 @@ private:
 	TObjectPtr<ARoomController> _roomController = nullptr;
 
 protected:
+	bool _isTriggered = false;
+
+protected:
 	int32 _puzzleKey = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
@@ -53,4 +56,7 @@ protected:
 	void OnTriggerEnter();
 
 	void OnTriggerExit();
+
+private:
+	void OnChangeTriggered(bool IsTriggered);
 };

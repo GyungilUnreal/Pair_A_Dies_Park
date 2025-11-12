@@ -2,6 +2,7 @@
 
 
 #include "JHS/Room/RoomManager.h"
+#include "JHS/GameControll/GameControlFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomDataTable.h"
@@ -39,13 +40,13 @@ TArray<int32> URoomManager::CreateRandomRoom()
 	if (_isDebugRoom)
 	{
 		TArray<int32> _debugRoomArray;
-		_debugRoomArray.Add(0);
+		_debugRoomArray.Add((int32)_debugRoomType);
 		return _debugRoomArray;
 	}
 
 	// 모든 방 타입 배열 생성
 	TArray<int32> _originRoomTypeArray;
-	for (int32 i = 0; i < static_cast<int32>(E_ROOM_TYPE::SIZE); i++)
+	for (int32 i = (int32)E_ROOM_TYPE::Tutorial + 1; i < (int32)E_ROOM_TYPE::SIZE; i++)
 	{
 		_originRoomTypeArray.Add(i);
 	}
@@ -58,9 +59,7 @@ TArray<int32> URoomManager::CreateRandomRoom()
 	{
 		// 남은 방 중에서 랜덤 선택
 		if (_originRoomTypeArray.Num() <= 0)
-		{
 			break;
-		}
 
 		int32 _randomIndex = FMath::RandRange(0, _originRoomTypeArray.Num() - 1);
 		int32 _randomRoomIndex = _originRoomTypeArray[_randomIndex];
@@ -73,16 +72,13 @@ TArray<int32> URoomManager::CreateRandomRoom()
 	return _resultRoomIndexArray;
 }
 
-void URoomManager::OnCompletedRoom(int32 CompletedRommSequence)
+void URoomManager::OnCompletedRoom(int32 CompletedRoomIndex)
 {
-	TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	if (!_gameInstance)
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameInstance is nullptr"));
+	TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
+	if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
 		return;
-	}
 
-	_gameInstance->ChangeRoomSequence(CompletedRommSequence);
+	_gameInstance->ChangeRoom(CompletedRoomIndex);
 }
 
 void URoomManager::LoadLevel(FRoomData RoomData)
