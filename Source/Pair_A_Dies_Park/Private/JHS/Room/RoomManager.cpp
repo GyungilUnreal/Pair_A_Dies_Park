@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomDataTable.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 URoomManager::URoomManager()
@@ -13,6 +14,9 @@ URoomManager::URoomManager()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+	
+	// Enable network replication
+	SetIsReplicatedByDefault(true);
 }
 
 
@@ -36,7 +40,7 @@ void URoomManager::InitializeRoomManager()
 
 TArray<int32> URoomManager::CreateRandomRoom()
 {
-	// 테스트 룸 1개
+	// Create a single test room if in debug mode
 	if (_isDebugRoom)
 	{
 		TArray<int32> _debugRoomArray;
@@ -44,27 +48,27 @@ TArray<int32> URoomManager::CreateRandomRoom()
 		return _debugRoomArray;
 	}
 
-	// 모든 방 타입 배열 생성
+	// Create array of all room types
 	TArray<int32> _originRoomTypeArray;
 	for (int32 i = (int32)E_ROOM_TYPE::Tutorial + 1; i < (int32)E_ROOM_TYPE::SIZE; i++)
 	{
 		_originRoomTypeArray.Add(i);
 	}
 
-	// 랜덤 방 선택
+	// Randomly select rooms
 	TArray<int32> _resultRoomIndexArray;
 	int32 _originRoomNum = _originRoomTypeArray.Num();
 	int32 _roomCount = _maxRoomCount <= _originRoomNum ? _maxRoomCount : _originRoomNum;
 	for (int32 i = 0; i < _roomCount; i++)
 	{
-		// 남은 방 중에서 랜덤 선택
+		// Select randomly from remaining rooms
 		if (_originRoomTypeArray.Num() <= 0)
 			break;
 
 		int32 _randomIndex = FMath::RandRange(0, _originRoomTypeArray.Num() - 1);
 		int32 _randomRoomIndex = _originRoomTypeArray[_randomIndex];
 
-		// 결과 배열에 추가하고 원본 배열에서 제거
+		// Add to result array and remove from original array
 		_resultRoomIndexArray.Add(_randomRoomIndex);
 		_originRoomTypeArray.RemoveAt(_randomIndex);
 	}
@@ -72,8 +76,40 @@ TArray<int32> URoomManager::CreateRandomRoom()
 	return _resultRoomIndexArray;
 }
 
+void URoomManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	// Register properties for replication
+	DOREPLIFETIME(URoomManager, _isDebugRoom);
+	DOREPLIFETIME(URoomManager, _debugRoomType);
+	DOREPLIFETIME(URoomManager, _maxRoomCount);
+}
+
+void URoomManager::Server_CreateRandomRoom_Implementation()
+{
+	CreateRandomRoom();
+}
+
+void URoomManager::Server_OnCompletedRoom_Implementation(int32 CompletedRoomIndex)
+{
+	OnCompletedRoom(CompletedRoomIndex);
+}
+
+void URoomManager::Server_LoadLevel_Implementation(FRoomData RoomData)
+{
+	LoadLevel(RoomData);
+}
+
 void URoomManager::OnCompletedRoom(int32 CompletedRoomIndex)
 {
+	// Check if running on server
+	if (!GetOwner()->HasAuthority())
+	{
+		Server_OnCompletedRoom(CompletedRoomIndex);
+		return;
+	}
+
 	TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
 	if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
 		return;
@@ -83,6 +119,13 @@ void URoomManager::OnCompletedRoom(int32 CompletedRoomIndex)
 
 void URoomManager::LoadLevel(FRoomData RoomData)
 {
+	// Check if running on server
+	if (!GetOwner()->HasAuthority())
+	{
+		Server_LoadLevel(RoomData);
+		return;
+	}
+
 	FName _roomName = RoomData.RoomTitle;
 	UE_LOG(LogTemp, Warning, TEXT("Loading room: %s"), *_roomName.ToString());
 	GetWorld()->ServerTravel(*_roomName.ToString());
