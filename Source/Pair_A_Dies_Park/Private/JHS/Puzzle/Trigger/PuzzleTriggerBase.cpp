@@ -36,6 +36,8 @@ void APuzzleTriggerBase::DeactiveTrigger()
 	if (_isDeactiveOnTrigger)
 	{
 		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+		SetActorTickEnabled(false);
 	}
 }
 
@@ -47,7 +49,7 @@ void APuzzleTriggerBase::OnTriggerEnter()
 		return;
 	}
 
-	_roomController->ChangePuzzleTriggerState(_puzzleKey, true);
+	OnChangeTriggered(true);
 }
 
 void APuzzleTriggerBase::OnTriggerExit()
@@ -58,5 +60,11 @@ void APuzzleTriggerBase::OnTriggerExit()
 		return;
 	}
 
-	_roomController->ChangePuzzleTriggerState(_puzzleKey, false);
+	OnChangeTriggered(false);
+}
+
+void APuzzleTriggerBase::OnChangeTriggered(bool IsTriggered)
+{
+	_isTriggered = IsTriggered;
+	_roomController->ChangePuzzleTriggerState(_puzzleKey, _isTriggered);
 }

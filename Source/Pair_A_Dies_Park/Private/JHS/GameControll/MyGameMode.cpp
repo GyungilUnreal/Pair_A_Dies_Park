@@ -2,9 +2,11 @@
 
 
 #include "JHS/GameControll/MyGameMode.h"
+#include "JHS/GameControll/GameControlFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyGameInstance.h"
+#include "JHS/GameControll/MyGameInstance.h"
 #include "JHS/Room/RoomManager.h"
+#include "CharacterFunctionLibrary.h"
 
 AMyGameMode::AMyGameMode()
 {
@@ -23,11 +25,18 @@ void AMyGameMode::BeginPlay()
 
 void AMyGameMode::StartGame(bool IsTutorial)
 {
-    TObjectPtr<UMyGameInstance> _gameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-    _gameInstance->RegistRoomSequence(_roomManager->CreateRandomRoom());
+    TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
+    if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
+        return;
 
-    // 튜토리얼 여부에 따라 시작 방 인덱스 결정
-    _gameInstance->ChangeRoomSequence(IsTutorial ? -2 : -1);
+    // 튜토리얼 여부
+    TArray<int32> _roomSequenceArray;
+    if (!IsTutorial)
+    {
+        _roomSequenceArray = _roomManager->CreateRandomRoom();
+    }
+
+    _gameInstance->StartRoom(IsTutorial, _roomSequenceArray);
 }
 
 void AMyGameMode::OnGameEnd()

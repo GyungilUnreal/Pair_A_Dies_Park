@@ -37,15 +37,15 @@ private:
 public:
 	virtual void Init() override;
 
-private:
-	bool LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray);
-
 public:
-	void RegistRoomSequence(const TArray<int32>& RoomSequenceArray);
+	void StartRoom(bool IsTutorial, TArray<int32> RoomSequenceArray);
 
-	void ChangeRoomSequence(int32 CompletedRoomSequence);
+	void ChangeRoom(int32 CompletedRoomIndex);
 
-	int32 GetCurrentRoomSequence() { return _currentRoomSequence; }
+	FRoomData GetCurrentRoomData();
 
-	FRoomData GetRoomData(int32 RoomSequence) { return _roomDataArray[_roomSequenceArray[RoomSequence]]; }
+private:
+	void LoadLevel(int32 RoomIndex);
+
+	bool LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray);
 };

@@ -2,6 +2,7 @@
 
 
 #include "JHS/GameControll/MyGameInstance.h"
+#include "JHS/GameControll/GameControlFunctionLibrary.h"
 #include "JHS/Room/RoomDataTable.h"
 #include "Kismet/GameplayStatics.h"
 #include "JHS/GameControll/MyGameMode.h"
@@ -19,6 +20,109 @@ void UMyGameInstance::Init()
 		UE_LOG(LogTemp, Error, TEXT("Failed to load Room Data Table"));
 		return;
 	}
+}
+
+void UMyGameInstance::StartRoom(bool IsTutorial, TArray<int32> RoomSequenceArray)
+{
+	if (IsTutorial)
+	{
+		_currentRoomSequence = -1;
+		LoadLevel((int32)E_ROOM_TYPE::Tutorial);
+		return;
+	}
+
+	_roomSequenceArray = RoomSequenceArray;
+	if (_roomSequenceArray.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Room Sequence is empty"));
+		return;
+	}
+
+	for (int32 i = 0; i < _roomSequenceArray.Num(); i++)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Room Index: %d"), _roomSequenceArray[i]);
+	}
+
+	_currentRoomSequence = 0;
+	LoadLevel(_roomSequenceArray[_currentRoomSequence]);
+}
+
+void UMyGameInstance::ChangeRoom(int32 CompletedRoomIndex)
+{
+	// 튜토리얼
+	if (CompletedRoomIndex == (int32)E_ROOM_TYPE::Tutorial)
+	{
+		// TODO : 로비 이동
+		return;
+	}
+
+	// 보스 클리어
+	if (CompletedRoomIndex == (int32)E_ROOM_TYPE::Boss)
+	{
+		TObjectPtr<AMyGameMode> _gameMode = nullptr;
+		if (!UGameControlFunctionLibrary::TryGetGameMode(_gameMode))
+			return;
+
+		_isGameClear = true;
+		_gameMode->OnGameEnd();
+		return;
+	}
+
+	int _roomSequenceCount = _roomSequenceArray.Num();
+	if (_roomSequenceCount <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Room sequence is empty"));
+		return;
+	}
+
+	if (CompletedRoomIndex != _roomSequenceArray[_currentRoomSequence])
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%d] is not current sequence"), CompletedRoomIndex);
+		return;
+	}
+
+	_currentRoomSequence++;
+	int32 _nextRoomIndex = -1;
+	// 다음 레벨
+	if (_currentRoomSequence < _roomSequenceCount)
+	{
+		_nextRoomIndex = _roomSequenceArray[_currentRoomSequence];
+	}
+	// 보스 레벨
+	else
+	{
+		_nextRoomIndex = (int32)E_ROOM_TYPE::Boss;
+	}
+
+	LoadLevel(_nextRoomIndex);
+}
+
+FRoomData UMyGameInstance::GetCurrentRoomData()
+{
+	if (_currentRoomSequence == -1)
+		return _roomDataArray[(int32)E_ROOM_TYPE::Tutorial];
+
+	if (_roomSequenceArray.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Room sequence is empty"));
+		return FRoomData();
+	}
+
+	if (_currentRoomSequence >= _roomSequenceArray.Num())
+		return _roomDataArray[(int32)E_ROOM_TYPE::Boss];
+
+	return _roomDataArray[_roomSequenceArray[_currentRoomSequence]];
+}
+
+void UMyGameInstance::LoadLevel(int32 RoomIndex)
+{
+	TObjectPtr<URoomManager> _roomManager = nullptr;
+	if (!UGameControlFunctionLibrary::TryGetRoomManager(_roomManager))
+		return;
+
+	FRoomData _nextRoomData = _roomDataArray[RoomIndex];
+	UE_LOG(LogTemp, Warning, TEXT("Next sequence : [%d], Room desc : [%s]"), _currentRoomSequence, *_nextRoomData.RoomDescription);
+	_roomManager->LoadLevel(_nextRoomData);
 }
 
 bool UMyGameInstance::LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray)
@@ -57,72 +161,4 @@ bool UMyGameInstance::LoadRoomDataTable(TArray<FRoomData>& OutRoomDataArray)
 
 	UE_LOG(LogTemp, Warning, TEXT("Room Data Table loaded successfully. %d rows loaded"), OutRoomDataArray.Num());
 	return true;
-}
-
-void UMyGameInstance::RegistRoomSequence(const TArray<int32>& RoomSequenceArray)
-{
-	_roomSequenceArray = RoomSequenceArray;
-	
-	// 로그 출력
-	for (int32 i = 0; i < _roomSequenceArray.Num(); i++)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Room Index: %d"), _roomSequenceArray[i]);
-	}
-}
-
-void UMyGameInstance::ChangeRoomSequence(int32 CompletedRoomSequence)
-{
-	if (_isGameClear)
-		return;
-
-	TObjectPtr<AMyGameMode> _gameMode = Cast<AMyGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!_gameMode)
-	{
-		UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
-		return;
-	}
-
-	// 튜토리얼 레벨 시작
-	if (CompletedRoomSequence <= -2)
-	{
-		_currentRoomSequence = -2;
-	}
-	// 일반 레벨 시작
-	else if (CompletedRoomSequence == -1)
-	{
-		_currentRoomSequence = -1;
-		_isGameClear = false;
-	}
-	else
-	{
-		if (CompletedRoomSequence != _currentRoomSequence)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Completed sequence [%d] is not current sequence"), CompletedRoomSequence);
-			return;
-		}
-	}
-
-	_currentRoomSequence++;
-	if (_currentRoomSequence == _roomSequenceArray.Num())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Completed all sequence"));
-
-		_isGameClear = true;
-		_gameMode->OnGameEnd();
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Next sequence is [%d]"), _currentRoomSequence);
-
-	TObjectPtr<URoomManager> _roomManager = _gameMode->GetRoomManager();
-	if (!_roomManager)
-	{
-		UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
-		return;
-	}
-
-	// 다음 시퀀스 룸 시작
-	int32 _nextRoomIndex = _roomSequenceArray[_currentRoomSequence];
-	FRoomData _nextRoomData = _roomDataArray[_nextRoomIndex];
-	_roomManager->LoadLevel(_nextRoomData);
 }
