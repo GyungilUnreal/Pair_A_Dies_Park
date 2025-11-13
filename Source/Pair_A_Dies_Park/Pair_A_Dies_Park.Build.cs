@@ -10,7 +10,10 @@ public class Pair_A_Dies_Park : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", 
 			"GameplayAbilities", "GameplayTags", "GameplayTasks", 
-			"UMG", "SlateCore" 
-		});
-	}
+			"UMG", "SlateCore",
+			"OnlineSubsystem", "OnlineSubsystemUtils"
+        });
+
+        DynamicallyLoadedModuleNames.Add("OnlineSubsystemNull");
+    }
 }
