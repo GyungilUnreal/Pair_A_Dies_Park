@@ -15,6 +15,8 @@ UMyGameInstance::UMyGameInstance()
 
 void UMyGameInstance::Init()
 {
+	Super::Init();
+
 	if (!LoadRoomDataTable(_roomDataArray))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to load Room Data Table"));
