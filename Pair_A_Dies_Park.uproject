@@ -9,7 +9,9 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"Engine"
+				"Engine",
+				"AIModule",
+				"GameplayAbilities"
 			]
 		}
 	],
@@ -31,6 +33,10 @@
 		},
 		{
 			"Name": "WaterExtras",
+			"Enabled": true
+		},
+		{
+			"Name": "HDRIBackdrop",
 			"Enabled": true
 		}
 	]
