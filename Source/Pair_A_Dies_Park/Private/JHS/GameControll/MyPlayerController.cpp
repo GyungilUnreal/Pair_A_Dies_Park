@@ -18,6 +18,17 @@ void AMyPlayerController::OnPossess(APawn* InPawn)
 
     FRoomData _roomData = _gameInstance->GetCurrentRoomData();
     float _playerScale = _roomData.PlayerScale;
+    if (_playerScale <= 0.0f)
+    {
+        _playerScale = 1.0f;
+    }
+
+    float _cameraDistance = _roomData.CameraDistance;
+    if (_cameraDistance <= 0.0f)
+    {
+        _cameraDistance = 200.0f;
+    }
+
     TObjectPtr<ACharacter> _character = Cast<ACharacter>(InPawn);
     if (!_character)
     {
@@ -26,5 +37,5 @@ void AMyPlayerController::OnPossess(APawn* InPawn)
     }
 
     UCharacterFunctionLibrary::SetPlayerScale(_character, _playerScale);
-    UCharacterFunctionLibrary::SetCameraDistance(_character, _roomData.CameraDistance);
+    UCharacterFunctionLibrary::SetCameraDistance(_character, _cameraDistance);
 }

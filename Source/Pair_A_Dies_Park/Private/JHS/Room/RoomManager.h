@@ -9,17 +9,7 @@
 
 #include "RoomManager.generated.h"
 
-UENUM(BlueprintType)
-enum class E_ROOM_TYPE : uint8
-{
-	Boss = 0 UMETA(DisplayName = "Boss"),
-	Tutorial UMETA(DisplayName = "Tutorial"),
-	Subway UMETA(DisplayName = "Subway"),
-	Volcanic UMETA(DisplayName = "Volcanic"),
-	Dungeon UMETA(DisplayName = "Dungeon"),
 
-	SIZE UMETA(DisplayName = "SIZE")
-};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class URoomManager : public UActorComponent
@@ -30,15 +20,7 @@ public:
 	// Sets default values for this component's properties
 	URoomManager();
 
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Room Manager|Debug")
-	bool _isDebugRoom = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Room Manager|Debug")
-	E_ROOM_TYPE _debugRoomType;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Room Manager|Room")
-	int32 _maxRoomCount = 3;
 
 protected:
 	// Called when the game starts
@@ -57,7 +39,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CreateRandomRoom();
 	
-	TArray<int32> CreateRandomRoom();
+	//TArray<int32> CreateRandomRoom();
 
 	UFUNCTION(Server, Reliable)
 	void Server_OnCompletedRoom(int32 CompletedRoomIndex);

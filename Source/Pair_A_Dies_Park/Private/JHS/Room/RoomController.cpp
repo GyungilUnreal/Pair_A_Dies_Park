@@ -44,12 +44,10 @@ void ARoomController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	// 복제할 속성 등록
-	DOREPLIFETIME(ARoomController, _roomManager);
 	DOREPLIFETIME(ARoomController, _roomData);
 	DOREPLIFETIME(ARoomController, _roomType);
 	DOREPLIFETIME(ARoomController, _puzzleDataArray);
 	DOREPLIFETIME(ARoomController, _roomClearDoor);
-	// _puzzleTriggerMap은 TMap 타입이므로 복제에서 제외
 	DOREPLIFETIME(ARoomController, _activePuzzleIndices);
 }
 
@@ -70,7 +68,14 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 	// 룸 클리어 문
 	if (PuzzleKey == ROOM_CLEAR_DOOR_KEY)
 	{
-		_roomManager->OnCompletedRoom((int32)_roomType);
+		if (!IsTriggered)
+			return;
+
+		TObjectPtr<URoomSubsystem> _roomSubSystem = nullptr;
+		if (!UGameControlFunctionLibrary::TryGetRoomSubSystem(nullptr, _roomSubSystem))
+			return;
+
+		_roomSubSystem->OnCompletedRoom((int32)_roomType);
 		return;
 	}
 
@@ -112,14 +117,6 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 
 void ARoomController::InitializeRoomController()
 {
-	TObjectPtr<AMyGameMode> _gameMode = nullptr;
-	if (!UGameControlFunctionLibrary::TryGetGameMode(_gameMode))
-		return;
-
-	TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
-	if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
-		return;
-
 	// 룸 클리어 문 트리거
 	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);
 	
