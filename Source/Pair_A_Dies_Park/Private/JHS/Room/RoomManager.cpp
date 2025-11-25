@@ -38,57 +38,57 @@ void URoomManager::InitializeRoomManager()
 {
 }
 
-TArray<int32> URoomManager::CreateRandomRoom()
-{
-	// Create a single test room if in debug mode
-	if (_isDebugRoom)
-	{
-		TArray<int32> _debugRoomArray;
-		_debugRoomArray.Add((int32)_debugRoomType);
-		return _debugRoomArray;
-	}
-
-	// Create array of all room types
-	TArray<int32> _originRoomTypeArray;
-	for (int32 i = (int32)E_ROOM_TYPE::Tutorial + 1; i < (int32)E_ROOM_TYPE::SIZE; i++)
-	{
-		_originRoomTypeArray.Add(i);
-	}
-
-	// Randomly select rooms
-	TArray<int32> _resultRoomIndexArray;
-	int32 _originRoomNum = _originRoomTypeArray.Num();
-	int32 _roomCount = _maxRoomCount <= _originRoomNum ? _maxRoomCount : _originRoomNum;
-	for (int32 i = 0; i < _roomCount; i++)
-	{
-		// Select randomly from remaining rooms
-		if (_originRoomTypeArray.Num() <= 0)
-			break;
-
-		int32 _randomIndex = FMath::RandRange(0, _originRoomTypeArray.Num() - 1);
-		int32 _randomRoomIndex = _originRoomTypeArray[_randomIndex];
-
-		// Add to result array and remove from original array
-		_resultRoomIndexArray.Add(_randomRoomIndex);
-		_originRoomTypeArray.RemoveAt(_randomIndex);
-	}
-
-	return _resultRoomIndexArray;
-}
+//TArray<int32> URoomManager::CreateRandomRoom()
+//{
+//	// Create a single test room if in debug mode
+//	if (_isDebugRoom)
+//	{
+//		TArray<int32> _debugRoomArray;
+//		_debugRoomArray.Add((int32)_debugRoomType);
+//		return _debugRoomArray;
+//	}
+//
+//	// Create array of all room types
+//	TArray<int32> _originRoomTypeArray;
+//	for (int32 i = (int32)E_ROOM_TYPE::Tutorial + 1; i < (int32)E_ROOM_TYPE::SIZE; i++)
+//	{
+//		_originRoomTypeArray.Add(i);
+//	}
+//
+//	// Randomly select rooms
+//	TArray<int32> _resultRoomIndexArray;
+//	int32 _originRoomNum = _originRoomTypeArray.Num();
+//	int32 _roomCount = _maxRoomCount <= _originRoomNum ? _maxRoomCount : _originRoomNum;
+//	for (int32 i = 0; i < _roomCount; i++)
+//	{
+//		// Select randomly from remaining rooms
+//		if (_originRoomTypeArray.Num() <= 0)
+//			break;
+//
+//		int32 _randomIndex = FMath::RandRange(0, _originRoomTypeArray.Num() - 1);
+//		int32 _randomRoomIndex = _originRoomTypeArray[_randomIndex];
+//
+//		// Add to result array and remove from original array
+//		_resultRoomIndexArray.Add(_randomRoomIndex);
+//		_originRoomTypeArray.RemoveAt(_randomIndex);
+//	}
+//
+//	return _resultRoomIndexArray;
+//}
 
 void URoomManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	// Register properties for replication
-	DOREPLIFETIME(URoomManager, _isDebugRoom);
+	/*DOREPLIFETIME(URoomManager, _isDebugRoom);
 	DOREPLIFETIME(URoomManager, _debugRoomType);
-	DOREPLIFETIME(URoomManager, _maxRoomCount);
+	DOREPLIFETIME(URoomManager, _maxRoomCount);*/
 }
 
 void URoomManager::Server_CreateRandomRoom_Implementation()
 {
-	CreateRandomRoom();
+	//CreateRandomRoom();
 }
 
 void URoomManager::Server_OnCompletedRoom_Implementation(int32 CompletedRoomIndex)

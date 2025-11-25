@@ -10,36 +10,15 @@
 
 AMyGameMode::AMyGameMode()
 {
-    _roomManager = CreateDefaultSubobject<URoomManager>(TEXT("RoomManager"));
+    /*_roomManager = CreateDefaultSubobject<URoomManager>(TEXT("RoomManager"));
     if (_roomManager == nullptr)
     {
         UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
         return;
-    }
+    }*/
 }
 
 void AMyGameMode::BeginPlay()
 {
     Super::BeginPlay();
-}
-
-void AMyGameMode::StartGame(bool IsTutorial)
-{
-    TObjectPtr<UMyGameInstance> _gameInstance = nullptr;
-    if (!UGameControlFunctionLibrary::TryGetGameInstance(_gameInstance))
-        return;
-
-    // 튜토리얼 여부
-    TArray<int32> _roomSequenceArray;
-    if (!IsTutorial)
-    {
-        _roomSequenceArray = _roomManager->CreateRandomRoom();
-    }
-
-    _gameInstance->StartRoom(IsTutorial, _roomSequenceArray);
-}
-
-void AMyGameMode::OnGameEnd()
-{
-    UE_LOG(LogTemp, Warning, TEXT("Game end"));
 }

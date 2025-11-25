@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "JHS/Room/RoomDataTable.h"
-#include "JHS/Room/RoomManager.h"
+#include "JHS/GameControll/RoomSubsystem.h"
 #include "Net/UnrealNetwork.h"
 
 #include "RoomController.generated.h"
@@ -39,9 +39,6 @@ public:
 	ARoomController();
 
 private:
-	UPROPERTY(Replicated)
-	TObjectPtr<class URoomManager> _roomManager = nullptr;
-
 	UPROPERTY(Replicated)
 	FRoomData _roomData;
 

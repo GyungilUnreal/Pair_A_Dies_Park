@@ -26,10 +26,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Components")
 	TObjectPtr<UStaticMeshComponent> _rootComponent = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Debug")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Debug")
 	bool _isDebugLog = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
 	int32 _requirePlayerCount = 1;
 
 protected:

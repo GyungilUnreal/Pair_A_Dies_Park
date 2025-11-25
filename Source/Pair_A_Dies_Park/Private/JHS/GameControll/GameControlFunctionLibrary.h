@@ -9,7 +9,7 @@
 
 class UMyGameInstance;
 class AMyGameMode;
-class URoomManager;
+class URoomSubsystem;
 
 UCLASS()
 class UGameControlFunctionLibrary : public UBlueprintFunctionLibrary
@@ -19,9 +19,9 @@ class UGameControlFunctionLibrary : public UBlueprintFunctionLibrary
 public:
 	static bool TryGetGameInstance(TObjectPtr<UMyGameInstance>& OutGameInstance);
 
-	static bool TryGetGameMode(TObjectPtr<AMyGameMode>& OutGameMode);
+	static bool TryGetRoomSubSystem(TObjectPtr<UMyGameInstance> GameInstnace, TObjectPtr<URoomSubsystem>& OutRoomSubSystem);
 
-	static bool TryGetRoomManager(TObjectPtr<URoomManager>& OutRoomManager);
+	static bool TryGetGameMode(TObjectPtr<AMyGameMode>& OutGameMode);
 
 private:
 	static bool TryGetWorld(TObjectPtr<UWorld>& OutWorld);

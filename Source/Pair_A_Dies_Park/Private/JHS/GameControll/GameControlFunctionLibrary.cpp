@@ -4,8 +4,8 @@
 #include "JHS/GameControll/GameControlFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "JHS/GameControll/MyGameInstance.h"
+#include "JHS/GameControll/RoomSubsystem.h"
 #include "JHS/GameControll/MyGameMode.h"
-#include "JHS/Room/RoomManager.h"
 
 bool UGameControlFunctionLibrary::TryGetGameInstance(TObjectPtr<UMyGameInstance>& OutGameInstance)
 {
@@ -23,6 +23,26 @@ bool UGameControlFunctionLibrary::TryGetGameInstance(TObjectPtr<UMyGameInstance>
     return true;
 }
 
+bool UGameControlFunctionLibrary::TryGetRoomSubSystem(TObjectPtr<UMyGameInstance> GameInstnace, TObjectPtr<URoomSubsystem>& OutRoomSubSystem)
+{
+    TObjectPtr<UMyGameInstance> OutGameInstance = GameInstnace;
+    if (!OutGameInstance)
+    {
+        if (!TryGetGameInstance(OutGameInstance))
+            return false;
+    }
+
+    // 게임 인스턴스에서 직접 서브시스템 가져오기
+    OutRoomSubSystem = OutGameInstance->GetSubsystem<URoomSubsystem>();
+    if (!OutRoomSubSystem)
+    {
+        UE_LOG(LogTemp, Error, TEXT("RoomSubsystem is nullptr"));
+        return false;
+    }
+
+    return true;
+}
+
 bool UGameControlFunctionLibrary::TryGetGameMode(TObjectPtr<AMyGameMode>& OutGameMode)
 {
     TObjectPtr<UWorld> World = nullptr;
@@ -33,22 +53,6 @@ bool UGameControlFunctionLibrary::TryGetGameMode(TObjectPtr<AMyGameMode>& OutGam
     if (!OutGameMode)
     {
         UE_LOG(LogTemp, Error, TEXT("GameMode is nullptr"));
-        return false;
-    }
-
-    return true;
-}
-
-bool UGameControlFunctionLibrary::TryGetRoomManager(TObjectPtr<URoomManager>& OutRoomManager)
-{
-    TObjectPtr<AMyGameMode> OutGameMode = nullptr;
-    if (!TryGetGameMode(OutGameMode))
-        return false;
-
-    OutRoomManager = OutGameMode->GetRoomManager();
-    if (!OutRoomManager)
-    {
-        UE_LOG(LogTemp, Error, TEXT("RoomManager is nullptr"));
         return false;
     }
 

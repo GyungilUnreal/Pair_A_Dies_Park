@@ -38,11 +38,14 @@ public:
 	virtual void Init() override;
 
 public:
-	void StartRoom(bool IsTutorial, TArray<int32> RoomSequenceArray);
+	UFUNCTION(BlueprintCallable, Category = "Game Mode|Start Game")
+	void GameStart(bool IsTutorial);
 
-	void ChangeRoom(int32 CompletedRoomIndex);
+	void GameEnd();
 
 	FRoomData GetCurrentRoomData();
+
+	void ChangeRoom(int32 CompletedRoomIndex);
 
 private:
 	void LoadLevel(int32 RoomIndex);

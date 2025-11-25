@@ -66,5 +66,11 @@ void APuzzleTriggerBase::OnTriggerExit()
 void APuzzleTriggerBase::OnChangeTriggered(bool IsTriggered)
 {
 	_isTriggered = IsTriggered;
+	if (_roomController == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OnChangeTriggered: _roomController is nullptr"));
+		return;
+	}
+
 	_roomController->ChangePuzzleTriggerState(_puzzleKey, _isTriggered);
 }
