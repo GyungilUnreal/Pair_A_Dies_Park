@@ -42,7 +42,12 @@ void UGA_BossFloorAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 		if (FloorManager)
 		{
-			FloorManager->Server_BreakCubes(CoordsToBreak_Test);
+			// 하나씩 꺼내서 호출합니다.
+			for (const FIntPoint& Coord : CoordsToBreak_Test)
+			{
+				// 1층(Layer 0)의 해당 좌표 타일에 2 데미지(파괴)를 입힘
+				FloorManager->Server_DamageTile(0, Coord, 2);
+			}
 		}
 
 	}

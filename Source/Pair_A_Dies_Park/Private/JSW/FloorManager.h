@@ -6,6 +6,18 @@
 #include "GameFramework/Actor.h"
 #include "FloorManager.generated.h"
 
+USTRUCT(BlueprintType)
+struct FTileData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	uint8 HP = 2;
+
+	UPROPERTY()
+	TObjectPtr<AActor> VisualActor = nullptr;
+};
+
 UCLASS()
 class AFloorManager : public AActor
 {
@@ -15,36 +27,49 @@ public:
 	// Sets default values for this actor's properties
 	AFloorManager();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")
+	float Floor1_Height = 43111.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")
+	float Floor2_Height = 49550.0f;
+
 protected:
 	// 9X9의 그리드 상태를 저장하는 1차원 배열 (true=파괴됨, false=존재)
-	UPROPERTY(ReplicatedUsing = OnRep_GridState)
-	TArray<bool> GridState;
+	UPROPERTY(ReplicatedUsing = OnRep_GridData)
+	TArray<FTileData> GridData;
 
-	// 레벨에 배치된 AFloorTile 액터를 정렬, 저장하는 로컬 배열 (복제 안 함)
-	UPROPERTY()
-	TArray<TObjectPtr<AActor>> LocalCubes;
+	// 설정값
+	const int32 GridWidth = 9;
+	const int32 TilesPerLayer = 81; // 9*9
 
-	// 파괴 가능 여부 마스크 (true=파괴가능, false=보스발판)
-	UPROPERTY()
-	TArray<bool> bIsBreakable;
-
-	// 그리드의 가로 크기
-	UPROPERTY(EditDefaultsOnly, Category = "Floor Grid")
-	int32 GridWidth = 9;
+	// 타일 사이즈
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")
+	float TileSize = 1320.0f;
 
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
-	void OnRep_GridState();
+	void OnRep_GridData();
 
-	// 상태를 로컬 큐브 비주얼에 반영
+	// 데이터 상태(HP)를 보고 액터를 숨기거나 머티리얼을 바꿈
 	void UpdateVisualsFromState();
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
-	void Server_BreakCubes(const TArray<FIntPoint>& CoordsToBreak);
+	// 월드 좌표를 그리드 인덱스로 변환 (성공 시 true 반환)
+	bool WorldToGridIndex(FVector WorldPos, int32& OutLayer, FIntPoint& OutCoord);
 
+	// 해당 좌표의 타일이 밟을 수 있는 상태인지 확인 (HP > 0)
+	bool IsTileWalkable(int32 Layer, FIntPoint Coord);
+
+	// 특정 타일의 월드 위치 반환 (큐브 스폰, 텔레포트용)
+	FVector GetTileWorldLocation(int32 Layer, FIntPoint Coord);
+
+	// 데미지 적용 (서버 전용)
 	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
-	void Server_RegenerateCubes(const TArray<FIntPoint>& CoordsToRegen);
+	void Server_DamageTile(int32 Layer, FIntPoint Coord, int32 DamageAmount);
+
+	// 타일 복구 (서버 전용)
+	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
+	void Server_RestoreRandomTiles(int32 Layer, int32 Count);
 };
