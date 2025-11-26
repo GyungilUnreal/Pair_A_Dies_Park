@@ -202,15 +202,7 @@ void UOptionsMenuWidget::OnResolutionChanged(FString SelectedItem, ESelectInfo::
         return;
     }
 
-    // "1920x1080" 형태를 파싱
     int32 X = 0, Y = 0;
-    if (SelectedItem.Split(TEXT("x"), &SelectedItem, &SelectedItem))
-    {
-        X = FCString::Atoi(*SelectedItem);
-        Y = FCString::Atoi(*SelectedItem.RightChop(SelectedItem.Find(TEXT("x")) + 1));
-    }
-
-    // 위 Split 로직이 좀 꼬일 수 있으니, 조금 더 안전하게:
 
     {
         FString Left, Right;

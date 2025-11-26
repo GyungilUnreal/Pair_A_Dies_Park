@@ -13,6 +13,8 @@ class UGameSettingsSubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
+    UGameSettingsSubsystem();
+
     // Subsystem 라이프사이클
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;

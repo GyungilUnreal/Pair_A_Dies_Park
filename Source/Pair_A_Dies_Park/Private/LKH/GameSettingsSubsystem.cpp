@@ -5,6 +5,37 @@
 #include "Engine/Engine.h"
 #include "GameFramework/GameUserSettings.h"
 
+UGameSettingsSubsystem::UGameSettingsSubsystem()
+{
+    static ConstructorHelpers::FObjectFinder<USoundClass> MasterSC(
+        TEXT("/Game/Collaborators/LKH/Split/SFX/MasterSoundClass.MasterSoundClass"));
+    if (MasterSC.Succeeded())
+    {
+        MasterSoundClass = MasterSC.Object;
+    }
+
+    static ConstructorHelpers::FObjectFinder<USoundClass> BGMSC(
+        TEXT("/Game/Collaborators/LKH/Split/SFX/BGMSoundClass.BGMSoundClass"));
+    if (BGMSC.Succeeded())
+    {
+        BGMSoundClass = BGMSC.Object;
+    }
+
+    static ConstructorHelpers::FObjectFinder<USoundClass> SFXSC(
+        TEXT("/Game/Collaborators/LKH/Split/SFX/SFXSoundClass.SFXSoundClass"));
+    if (SFXSC.Succeeded())
+    {
+        SFXSoundClass = SFXSC.Object;
+    }
+
+    static ConstructorHelpers::FObjectFinder<USoundMix> MainMix(
+        TEXT("/Game/Audio/Mixes/MainSoundMix.MainSoundMix"));
+    if (MainMix.Succeeded())
+    {
+        MainSoundMix = MainMix.Object;
+    }
+}
+
 void UGameSettingsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
