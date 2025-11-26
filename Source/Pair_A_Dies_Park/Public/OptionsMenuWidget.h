@@ -5,6 +5,8 @@
 #include "Components/Slider.h"
 #include "Components/ComboBoxString.h"
 #include "Components/Button.h"
+#include "Components/CheckBox.h"
+#include "Components/ProgressBar.h"
 #include "GameSettingsSubsystem.h"
 #include "OptionsMenuWidget.generated.h"
 
@@ -16,7 +18,7 @@ class UOptionsMenuWidget : public UUserWidget
 public:
     virtual void NativeOnInitialized() override;
 
-protected:
+public:
     // ---------- BindWidget: UMG에서 자동 연결될 위젯들 ----------
 
     /** 마스터 볼륨 슬라이더 (0.0 ~ 1.0) */
@@ -39,6 +41,16 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UComboBoxString* WindowModeComboBox;
 
+    /** 그래픽 품질 콤보 (Low / Medium / High / Epic) */
+    UPROPERTY(meta = (BindWidget))
+    UComboBoxString* GraphicsQualityComboBox;
+
+    UPROPERTY(meta = (BindWidget))
+    USlider* MouseSensitivitySlider;
+
+    UPROPERTY(meta = (BindWidget))
+    UCheckBox* InvertYCheckBox;
+
     /** 적용 버튼 */
     UPROPERTY(meta = (BindWidget))
     UButton* ApplyButton;
@@ -50,6 +62,18 @@ protected:
     /** 취소/닫기 버튼 (선택) */
     UPROPERTY(meta = (BindWidget, Optional))
     UButton* CancelButton;
+
+    UPROPERTY(meta = (BindWidget, Optional))
+    UProgressBar* MouseSensitivityProgressBar;
+
+    UPROPERTY(meta = (BindWidget, Optional))
+    UProgressBar* MasterVolumeProgressBar;
+
+    UPROPERTY(meta = (BindWidget, Optional))
+    UProgressBar* BGMVolumeProgressBar;
+
+    UPROPERTY(meta = (BindWidget, Optional))
+    UProgressBar* SFXVolumeProgressBar;
 
 protected:
     // ---------- 내부 참조 ----------
@@ -98,6 +122,15 @@ protected:
     void OnWindowModeChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
 
     UFUNCTION()
+    void OnGraphicsQualityChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
+
+    UFUNCTION()
+    void OnMouseSensitivityChanged(float Value);
+
+    UFUNCTION()
+    void OnInvertYChanged(bool bIsChecked);
+
+    UFUNCTION()
     void OnApplyClicked();
 
     UFUNCTION()
@@ -110,4 +143,5 @@ protected:
 
     int32 FindResolutionIndexFromSettings() const;
     int32 FindWindowModeIndexFromSettings() const;
+    int32 FindGraphicsQualityIndexFromSettings() const;
 };
