@@ -1,4 +1,5 @@
 #include "GameSettingsSubsystem.h"
+#include "Split_character.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
@@ -257,10 +258,14 @@ void UGameSettingsSubsystem::ApplyGameplaySettings()
         return;
     }
 
-    APlayerController* PC = World->GetFirstPlayerController();
-    if (!PC)
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
     {
-        return;
+        APawn* Pawn = PC->GetPawn();
+        if (ASplit_Character* MyChar = Cast<ASplit_Character>(Pawn))
+        {
+            MyChar->MouseSensitivity = CurrentSettings->MouseSensitivity;
+            MyChar->bInvertY = CurrentSettings->bInvertY;
+        }
     }
 
     // 예) PlayerController에 IGameSettingsListener 같은 인터페이스를 만들어서 넘겨주는 방식 등
