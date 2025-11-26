@@ -71,6 +71,16 @@ void UOptionsMenuWidget::SetupComboBoxOptions()
     WindowModeComboBox->AddOption(TEXT("Fullscreen"));
     WindowModeComboBox->AddOption(TEXT("Windowed"));
     WindowModeComboBox->AddOption(TEXT("Borderless"));
+
+    // ---- 그래픽 품질 콤보 ----
+    if (GraphicsQualityComboBox)
+    {
+        GraphicsQualityComboBox->ClearOptions();
+        GraphicsQualityComboBox->AddOption(TEXT("Low"));
+        GraphicsQualityComboBox->AddOption(TEXT("Medium"));
+        GraphicsQualityComboBox->AddOption(TEXT("High"));
+        GraphicsQualityComboBox->AddOption(TEXT("Epic"));
+    }
 }
 
 void UOptionsMenuWidget::RefreshUIFromSettings()
@@ -116,6 +126,38 @@ void UOptionsMenuWidget::RefreshUIFromSettings()
             WindowModeComboBox->SetSelectedOption(Label);
         }
     }
+
+    if (GraphicsQualityComboBox)
+    {
+        const int32 Index = FindGraphicsQualityIndexFromSettings();
+        if (Index != INDEX_NONE && Index < GraphicsQualityComboBox->GetOptionCount())
+        {
+            const FString Label = GraphicsQualityComboBox->GetOptionAtIndex(Index);
+            GraphicsQualityComboBox->SetSelectedOption(Label);
+        }
+    }
+
+    if (MouseSensitivitySlider)
+    {
+        MouseSensitivitySlider->SetValue(Settings->MouseSensitivity);
+    }
+
+    if (InvertYCheckBox)
+    {
+        InvertYCheckBox->SetIsChecked(Settings->bInvertY);
+    }
+
+    if (MouseSensitivityProgressBar)
+        MouseSensitivityProgressBar->SetPercent(Settings->MouseSensitivity);
+
+    if (MasterVolumeProgressBar)
+        MasterVolumeProgressBar->SetPercent(Settings->MasterVolume);
+
+    if (BGMVolumeProgressBar)
+        BGMVolumeProgressBar->SetPercent(Settings->BGMVolume);
+
+    if (SFXVolumeProgressBar)
+        SFXVolumeProgressBar->SetPercent(Settings->SFXVolume);
 }
 
 void UOptionsMenuWidget::BindUIEvents()
@@ -150,6 +192,24 @@ void UOptionsMenuWidget::BindUIEvents()
             this, &UOptionsMenuWidget::OnWindowModeChanged);
     }
 
+    if (GraphicsQualityComboBox)
+    {
+        GraphicsQualityComboBox->OnSelectionChanged.AddDynamic(
+            this, &UOptionsMenuWidget::OnGraphicsQualityChanged);
+    }
+
+    if (MouseSensitivitySlider)
+    {
+        MouseSensitivitySlider->OnValueChanged.AddDynamic(
+            this, &UOptionsMenuWidget::OnMouseSensitivityChanged);
+    }
+
+    if (InvertYCheckBox)
+    {
+        InvertYCheckBox->OnCheckStateChanged.AddDynamic(
+            this, &UOptionsMenuWidget::OnInvertYChanged);
+    }
+
     if (ApplyButton)
     {
         ApplyButton->OnClicked.AddDynamic(
@@ -173,26 +233,32 @@ void UOptionsMenuWidget::BindUIEvents()
 
 void UOptionsMenuWidget::OnMasterVolumeChanged(float Value)
 {
-    if (Settings)
-    {
-        Settings->MasterVolume = Value;
-    }
+    if (!Settings) return;
+
+    Settings->MasterVolume = Value;
+
+    if (MasterVolumeProgressBar)
+        MasterVolumeProgressBar->SetPercent(Value);
 }
 
 void UOptionsMenuWidget::OnBGMVolumeChanged(float Value)
 {
-    if (Settings)
-    {
-        Settings->BGMVolume = Value;
-    }
+    if (!Settings) return;
+
+    Settings->BGMVolume = Value;
+
+    if (BGMVolumeProgressBar)
+        BGMVolumeProgressBar->SetPercent(Value);
 }
 
 void UOptionsMenuWidget::OnSFXVolumeChanged(float Value)
 {
-    if (Settings)
-    {
-        Settings->SFXVolume = Value;
-    }
+    if (!Settings) return;
+
+    Settings->SFXVolume = Value;
+
+    if (SFXVolumeProgressBar)
+        SFXVolumeProgressBar->SetPercent(Value);
 }
 
 void UOptionsMenuWidget::OnResolutionChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
@@ -239,6 +305,50 @@ void UOptionsMenuWidget::OnWindowModeChanged(FString SelectedItem, ESelectInfo::
     {
         Settings->WindowMode = EWindowMode::WindowedFullscreen;
     }
+}
+
+void UOptionsMenuWidget::OnGraphicsQualityChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
+{
+    if (!Settings)
+        return;
+
+    int32 NewQuality = Settings->GraphicsQuality;
+
+    if (SelectedItem == TEXT("Low"))
+    {
+        NewQuality = 0;
+    }
+    else if (SelectedItem == TEXT("Medium"))
+    {
+        NewQuality = 1;
+    }
+    else if (SelectedItem == TEXT("High"))
+    {
+        NewQuality = 2;
+    }
+    else if (SelectedItem == TEXT("Epic"))
+    {
+        NewQuality = 3;
+    }
+
+    Settings->GraphicsQuality = NewQuality;
+}
+
+void UOptionsMenuWidget::OnMouseSensitivityChanged(float Value)
+{
+    if (!Settings) return;
+
+    Settings->MouseSensitivity = Value;
+
+    if (MouseSensitivityProgressBar)
+        MouseSensitivityProgressBar->SetPercent(Value);
+}
+
+void UOptionsMenuWidget::OnInvertYChanged(bool bIsChecked)
+{
+    if (!Settings) return;
+
+    Settings->bInvertY = bIsChecked;
 }
 
 void UOptionsMenuWidget::OnApplyClicked()
@@ -331,4 +441,13 @@ int32 UOptionsMenuWidget::FindWindowModeIndexFromSettings() const
     default:
         return 0;
     }
+}
+
+int32 UOptionsMenuWidget::FindGraphicsQualityIndexFromSettings() const
+{
+    if (!Settings)
+        return INDEX_NONE;
+
+    // SaveGame 안에 0~3 범위라고 가정
+    return FMath::Clamp(Settings->GraphicsQuality, 0, 3);
 }

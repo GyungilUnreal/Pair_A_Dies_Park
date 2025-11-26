@@ -135,9 +135,21 @@ void ASplit_Character::Look(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
+		// 1) 감도 적용
+		LookAxisVector *= MouseSensitivity;
+
+		// 2) 인버트 Y 적용
+		float Yaw = LookAxisVector.X;
+		float Pitch = LookAxisVector.Y;
+
+		if (bInvertY)
+		{
+			Pitch = -Pitch;
+		}
+
+		// 3) 컨트롤러에 입력 반영
+		AddControllerYawInput(Yaw);
+		AddControllerPitchInput(Pitch);
 	}
 }
 
