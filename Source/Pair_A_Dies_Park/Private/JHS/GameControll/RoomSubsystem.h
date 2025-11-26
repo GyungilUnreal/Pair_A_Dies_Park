@@ -28,7 +28,7 @@ protected:
 	bool _isDebugRoom = true;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "RoomSubsystem|Debug")
-	E_ROOM_TYPE _debugRoomType = E_ROOM_TYPE::SIZE;
+	E_ROOM_TYPE _debugRoomType = E_ROOM_TYPE::Subway;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "RoomSubsystem|Room")
 	int32 _maxRoomCount = 3;
