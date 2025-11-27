@@ -79,62 +79,76 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 		return;
 	}
 
-	// 트리거 상태 갱신
-	bool* _isTriggered = nullptr;
-	if (!TryGetValue(PuzzleKey, _isTriggered))
+	FPuzzleData* _puzzleData = nullptr;
+	int32 _puzzleIndex = -1;
+	int32 _rawIndex = -1;
+	if (!TryGetPuzzleData(PuzzleKey, _puzzleData, _puzzleIndex, _rawIndex))
 		return;
 
-	*_isTriggered = IsTriggered;
-
-	// 트리거 완료 체크
 	bool _isActivate = true;
-	int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
-	FPuzzleData& _puzzleData = _puzzleDataArray[_puzzleIndex];
-	int32 _triggerNum = _puzzleData.PuzzleTriggerArray.Num();
-
 	// 모든 트리거가 활성화되었는지 확인
-	for (int32 i = 0; i < _triggerNum; i++)
+	for (int32 i = 0; i < _puzzleData->PuzzleTriggerArray.Num(); i++)
 	{
-		int32 _puzzleTriggerKey = _puzzleIndex * PUZZLE_DATA_RATE + i;
-		bool* _triggerState = nullptr;
-		
-		if (!TryGetValue(_puzzleTriggerKey, _triggerState))
-			return;
-
-		if (*_triggerState == false)
+		TObjectPtr<APuzzleTriggerBase> _trigger = _puzzleData->PuzzleTriggerArray[i];
+		if (!_trigger->IsTriggered())
 		{
 			_isActivate = false;
-			break;
 		}
 	}
 
 	// 액션 상태 변경
-	if (!_isActivate && _puzzleData.IsToggleTrigger)
+	if (!_isActivate && _puzzleData->IsLockActivatedAction)
 		return;
 
 	ChangePuzzleActionState(_puzzleIndex, _isActivate);
 }
 
+void ARoomController::OnActionDeactivated(int32 PuzzleIndex)
+{
+	FPuzzleData* _puzzleData = nullptr;
+	int32 _puzzleIndex = -1;
+	int32 _rawIndex = -1;
+	if (!TryGetPuzzleData(PuzzleIndex, _puzzleData, _puzzleIndex, _rawIndex))
+		return;
+
+	bool _isAllActionDeactivated = true;
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData->PuzzleActionArray)
+	{
+		if (_puzzleAction == nullptr)
+			continue;
+
+		if (_puzzleAction->IsActivate())
+		{
+			_isAllActionDeactivated = false;
+			break;
+		}
+	}
+
+	if (_isAllActionDeactivated)
+	{
+		for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData->PuzzleTriggerArray)
+		{
+			if (_puzzleTrigger == nullptr)
+				continue;
+
+			_puzzleTrigger->ChangeTriggerVisibility(true);
+		}
+	}
+}
+
 void ARoomController::InitializeRoomController()
 {
-	// 룸 클리어 문 트리거
-	_puzzleTriggerMap.Add(ROOM_CLEAR_DOOR_KEY, false);
-	
-	// _roomClearDoor가 null인지 확인
-	if (_roomClearDoor != nullptr)
-	{
-		_roomClearDoor->InitializePuzzleTrigger(this, ROOM_CLEAR_DOOR_KEY);
-	}
-	else
+	if (_roomClearDoor == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("_roomClearDoor is nullptr"));
 	}
+	else
+	{
+		_roomClearDoor->InitializePuzzleTrigger(this, ROOM_CLEAR_DOOR_KEY);
+	}
 
 	if (_puzzleDataArray.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Trigger is not set"));
 		return;
-	}
 
 	// 퍼즐 데이터 초기화
 	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
@@ -150,7 +164,6 @@ void ARoomController::InitializeRoomController()
 				continue;
 
 			_trigger->InitializePuzzleTrigger(this, _puzzleKey);
-			_puzzleTriggerMap.Add(_puzzleKey, false);
 		}
 
 		// 퍼즐 액션 초기화
@@ -164,84 +177,9 @@ void ARoomController::InitializeRoomController()
 	}
 }
 
-bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
-{
-	bool* _found = _puzzleTriggerMap.Find(PuzzleKey);
-	if (_found == nullptr)
-	{
-		int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
-		int32 _triggerIndex = PuzzleKey % PUZZLE_DATA_RATE;
-		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle trigger key : [%d] - PuzzleIndex : [%d], TriggerIndex : [%d]"), PuzzleKey, _puzzleIndex, _triggerIndex);
-		return false;
-	}
-
-	OutValue = _found;
-	return true;
-}
-
 void ARoomController::Server_ChangePuzzleActionState_Implementation(int32 PuzzleIndex, bool IsActive)
 {
 	ChangePuzzleActionState(PuzzleIndex, IsActive);
-}
-
-bool ARoomController::IsPuzzleActive(int32 PuzzleIndex) const
-{
-	return _activePuzzleIndices.Contains(PuzzleIndex);
-}
-
-void ARoomController::OnRep_ActivePuzzleIndices()
-{
-	// 클라이언트에서 실행되는 코드
-	if (HasAuthority())
-		return; // 서버에서는 이미 처리됨
-	
-	// 활성화된 모든 퍼즐 인덱스에 대해 액션 실행
-	for (int32 PuzzleIndex : _activePuzzleIndices)
-	{
-		if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
-			continue;
-			
-		FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
-		
-		// 액션 활성화 - 클라이언트에서 실행
-		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
-		{
-			if (_puzzleAction)
-			{
-				_puzzleAction->ActivatePuzzleAction();
-			}
-		}
-		
-		// 트리거 비활성화
-		if (_puzzleData.IsToggleTrigger)
-		{
-			for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData.PuzzleTriggerArray)
-			{
-				if (_puzzleTrigger)
-				{
-					_puzzleTrigger->DeactiveTrigger();
-				}
-			}
-		}
-	}
-	
-	// 비활성화된 퍼즐에 대한 처리
-	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
-	{
-		if (!_activePuzzleIndices.Contains(i))
-		{
-			FPuzzleData& _puzzleData = _puzzleDataArray[i];
-			
-			// 액션 비활성화 - 클라이언트에서 실행
-			for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
-			{
-				if (_puzzleAction)
-				{
-					_puzzleAction->DeactivatePuzzleAction();
-				}
-			}
-		}
-	}
 }
 
 void ARoomController::ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive)
@@ -259,56 +197,113 @@ void ARoomController::ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive)
 		return;
 	}
 	
-	FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
-
-	if (IsActive)
+	// 액션 활성화 상태 변경 (복제를 위함)
+	bool _stateChanged = false;
+	
+	if (IsActive && !_activePuzzleIndices.Contains(PuzzleIndex))
 	{
-		// 액션 활성화 상태를 배열에 추가 (복제를 위함)
-		if (!_activePuzzleIndices.Contains(PuzzleIndex))
-		{
-			_activePuzzleIndices.Add(PuzzleIndex);
-			// 복제 변수가 변경되었음을 알림
-			OnRep_ActivePuzzleIndices();
-		}
-		
-		// 액션 활성화 - 서버에서만 실행
-		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
-		{
-			if (_puzzleAction)
-			{
-				_puzzleAction->ActivatePuzzleAction();
-			}
-		}
-
-		// 트리거 비활성화
-		if (_puzzleData.IsToggleTrigger)
-		{
-			for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData.PuzzleTriggerArray)
-			{
-				if (_puzzleTrigger)
-				{
-					_puzzleTrigger->DeactiveTrigger();
-				}
-			}
-		}
+		_activePuzzleIndices.Add(PuzzleIndex);
+		_stateChanged = true;
 	}
-	else
+	else if (!IsActive && _activePuzzleIndices.Contains(PuzzleIndex))
 	{
-		// 액션 비활성화 상태를 배열에서 제거
-		if (_activePuzzleIndices.Contains(PuzzleIndex))
+		_activePuzzleIndices.Remove(PuzzleIndex);
+		_stateChanged = true;
+	}
+	
+	// 상태가 변경된 경우에만 복제 변수 변경 알림
+	if (_stateChanged)
+	{
+		OnRep_ActivePuzzleIndices();
+	}
+	
+	// 실제 액션 상태 적용
+	ApplyPuzzleActionState(PuzzleIndex, IsActive);
+}
+
+void ARoomController::OnRep_ActivePuzzleIndices()
+{
+	// 클라이언트에서 실행되는 코드
+	if (HasAuthority())
+		return; // 서버에서는 이미 처리됨
+
+	// 활성화된 모든 퍼즐 인덱스에 대해 액션 실행
+	for (int32 PuzzleIndex : _activePuzzleIndices)
+	{
+		if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
+			continue;
+
+		ApplyPuzzleActionState(PuzzleIndex, true);
+	}
+
+	// 비활성화된 퍼즐에 대한 처리
+	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
+	{
+		if (!_activePuzzleIndices.Contains(i))
 		{
-			_activePuzzleIndices.Remove(PuzzleIndex);
-			// 복제 변수가 변경되었음을 알림
-			OnRep_ActivePuzzleIndices();
-		}
-		
-		// 액션 비활성화 - 서버에서만 실행
-		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
-		{
-			if (_puzzleAction)
-			{
-				_puzzleAction->DeactivatePuzzleAction();
-			}
+			ApplyPuzzleActionState(i, false);
 		}
 	}
 }
+
+void ARoomController::ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive)
+{
+	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
+		return;
+
+	FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
+
+	// 액션 상태 적용
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
+	{
+		if (!_puzzleAction)
+			continue;
+
+		if (IsActive)
+			_puzzleAction->ActivatePuzzleAction();
+		else
+			_puzzleAction->DeactivatePuzzleAction();
+	}
+
+	// 트리거 비활성화 (액션이 활성화된 경우에만)
+	if (IsActive)
+	{
+		for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData.PuzzleTriggerArray)
+		{
+			if (_puzzleTrigger == nullptr)
+				continue;
+
+			_puzzleTrigger->ChangeTriggerVisibility(false);
+		}
+	}
+}
+
+bool ARoomController::TryGetPuzzleData(int32 PuzzleKey, FPuzzleData*& OutPuzzleData, int32& OutPuzzleIndex, int32& OutRawIndex)
+{
+	OutPuzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
+	OutRawIndex = PuzzleKey % PUZZLE_DATA_RATE;
+	
+	if (OutPuzzleIndex < 0 || OutPuzzleIndex >= _puzzleDataArray.Num())
+	{
+		UE_LOG(LogTemp, Error, TEXT("TryGetPuzzleData: Invalid puzzle index %d"), OutPuzzleIndex);
+		return false;
+	}
+
+	OutPuzzleData = &_puzzleDataArray[OutPuzzleIndex];
+	return true;
+}
+
+//bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
+//{
+//	bool* _found = _puzzleTriggerMap.Find(PuzzleKey);
+//	if (_found == nullptr)
+//	{
+//		int32 _puzzleIndex = PuzzleKey / PUZZLE_DATA_RATE;
+//		int32 _triggerIndex = PuzzleKey % PUZZLE_DATA_RATE;
+//		UE_LOG(LogTemp, Error, TEXT("Invalid puzzle trigger key : [%d] - PuzzleIndex : [%d], TriggerIndex : [%d]"), PuzzleKey, _puzzleIndex, _triggerIndex);
+//		return false;
+//	}
+//
+//	OutValue = _found;
+//	return true;
+//}

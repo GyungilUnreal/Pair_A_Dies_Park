@@ -25,40 +25,20 @@ void APuzzleTriggerBase::Tick(float DeltaTime)
 
 }
 
-void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey)
-{
-	_roomController = RoomController;
-	_puzzleKey = PuzzleKey;
-}
-
-void APuzzleTriggerBase::DeactiveTrigger()
-{
-	if (_isDeactiveOnTrigger)
-	{
-		SetActorHiddenInGame(true);
-		SetActorEnableCollision(false);
-		SetActorTickEnabled(false);
-	}
-}
-
 void APuzzleTriggerBase::OnTriggerEnter()
 {
-	if (_roomController == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("OnTriggerEnter: _roomController is nullptr"));
-		return;
-	}
-
 	OnChangeTriggered(true);
+
+	if (_isChangeImmediately)
+	{
+		ChangeTriggerVisibility(false);
+	}
 }
 
 void APuzzleTriggerBase::OnTriggerExit()
 {
-	if (_roomController == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("OnTriggerExit: _roomController is nullptr"));
+	if (_isLockOnTrigger && _isTriggered)
 		return;
-	}
 
 	OnChangeTriggered(false);
 }
@@ -73,4 +53,19 @@ void APuzzleTriggerBase::OnChangeTriggered(bool IsTriggered)
 	}
 
 	_roomController->ChangePuzzleTriggerState(_puzzleKey, _isTriggered);
+}
+
+void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey)
+{
+	_roomController = RoomController;
+	_puzzleKey = PuzzleKey;
+	_isTriggered = false;
+	ChangeTriggerVisibility(true);
+}
+
+void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)
+{
+	SetActorHiddenInGame(!IsVisible);
+	SetActorEnableCollision(IsVisible);
+	SetActorTickEnabled(IsVisible);
 }

@@ -16,7 +16,7 @@ public:
 	APuzzleActionBase();
 
 private:
-	bool _isActive = false;
+	bool _isActivate = false;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
@@ -24,6 +24,9 @@ protected:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
 	int32 _actionIndex = -1;
+
+public:
+	bool IsActivate() { return _isActivate; }
 
 protected:
 	// Called when the game starts or when spawned

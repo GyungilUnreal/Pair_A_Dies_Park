@@ -20,7 +20,7 @@ struct FPuzzleData
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
-	bool IsToggleTrigger = false;
+	bool IsLockActivatedAction = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
 	TArray<TObjectPtr<APuzzleTriggerBase>> PuzzleTriggerArray;
@@ -45,9 +45,6 @@ private:
 	static const int32 PUZZLE_DATA_RATE = 100;
 
 	static const int32 ROOM_CLEAR_DOOR_KEY = -1;
-
-	// 트리거 상태를 저장하는 맵
-	TMap<int32, bool> _puzzleTriggerMap;
 	
 	// 액션 활성화 상태를 클라이언트에 알리기 위한 변수
 	UPROPERTY(ReplicatedUsing=OnRep_ActivePuzzleIndices)
@@ -77,14 +74,14 @@ public:
 public:
 	// 클라이언트에서 서버로 트리거 상태 변경 요청
 	UFUNCTION(Server, Reliable)
-	void Server_ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
+	void Server_ChangePuzzleTriggerState(int32 TriggerKey, bool IsTriggered);
 	
-	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
+	void ChangePuzzleTriggerState(int32 TriggerKey, bool IsTriggered);
+
+	void OnActionDeactivated(int32 PuzzleKey);
 
 private:
 	void InitializeRoomController();
-
-	bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 
 	// 클라이언트에서 서버로 액션 상태 변경 요청
 	UFUNCTION(Server, Reliable)
@@ -96,6 +93,10 @@ private:
 	UFUNCTION()
 	void OnRep_ActivePuzzleIndices();
 	
-	// 특정 퍼즐 인덱스가 활성화되었는지 확인
-	bool IsPuzzleActive(int32 PuzzleIndex) const;
+	// 퍼즐 액션 상태를 적용하는 공통 함수
+	void ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive);
+
+	bool TryGetPuzzleData(int32 PuzzleKey, FPuzzleData*& OutPuzzleData, int32& OutPuzzleIndex, int32& OutRawIndex);
+
+	//bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 };

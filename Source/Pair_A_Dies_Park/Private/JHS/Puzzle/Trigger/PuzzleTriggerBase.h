@@ -37,7 +37,16 @@ protected:
 	int32 _puzzleKey = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	bool _isChangeImmediately = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	bool _isLockOnTrigger = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
 	bool _isDeactiveOnTrigger = false;
+
+public:
+	bool IsTriggered() { return _isTriggered; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -47,11 +56,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-public:
-	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
-
-	void DeactiveTrigger();
-
 protected:
 	void OnTriggerEnter();
 
@@ -59,4 +63,9 @@ protected:
 
 private:
 	void OnChangeTriggered(bool IsTriggered);
+
+public:
+	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
+
+	void ChangeTriggerVisibility(bool IsVisible);
 };
