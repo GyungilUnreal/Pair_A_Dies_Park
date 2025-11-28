@@ -260,6 +260,26 @@ void USessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuc
 	if (bWasSuccessful)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Session destroyed successfully: %s"), *SessionName.ToString());
+
+		UWorld* World = GetWorld();
+		if (World)
+		{
+			APlayerController* PlayerController = World->GetFirstPlayerController();
+			if (PlayerController)
+			{
+				// 호스트(리스너 서버)인지, 클라이언트인지에 따라 처리
+				if (PlayerController->HasAuthority())
+				{
+					// 호스트: 서버 트래블 (listen 옵션 포함)
+					World->ServerTravel(TEXT("/Game/Collaborators/LKH/Split/Main/Main?listen"));
+				}
+				else
+				{
+					// 클라이언트: 클라이언트 트래블
+					PlayerController->ClientTravel(TEXT("/Game/Collaborators/LKH/Split/Main/Main"), ETravelType::TRAVEL_Absolute);
+				}
+			}
+		}
 	}
 	else
 	{
