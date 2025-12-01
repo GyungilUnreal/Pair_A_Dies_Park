@@ -96,10 +96,6 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 		}
 	}
 
-	// 액션 상태 변경
-	if (!_isActivate && _puzzleData->IsLockActivatedAction)
-		return;
-
 	ChangePuzzleActionState(_puzzleIndex, _isActivate);
 }
 
@@ -154,6 +150,7 @@ void ARoomController::InitializeRoomController()
 	for (int32 i = 0; i < _puzzleDataArray.Num(); i++)
 	{
 		FPuzzleData& _puzzleData = _puzzleDataArray[i];
+		_puzzleData.IsPuzzleActivated = false;
 
 		// 퍼즐 트리거 초기화
 		for (int32 j = 0; j < _puzzleData.PuzzleTriggerArray.Num(); j++)
@@ -251,10 +248,15 @@ void ARoomController::ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive)
 	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
 		return;
 
-	FPuzzleData& _puzzleData = _puzzleDataArray[PuzzleIndex];
+	// 배열 요소를 포인터로 캐싱하여 직접 접근 가능하게 함
+	FPuzzleData* _puzzleDataPtr = &_puzzleDataArray[PuzzleIndex];
+	
+	// 이미 활성화된 퍼즐이고 잠금 설정이 되어있다면 비활성화 방지
+	if (!IsActive && _puzzleDataPtr->IsPuzzleActivated && _puzzleDataPtr->IsLockActivatedAction)
+		return;
 
 	// 액션 상태 적용
-	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData.PuzzleActionArray)
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleDataPtr->PuzzleActionArray)
 	{
 		if (!_puzzleAction)
 			continue;
@@ -265,17 +267,17 @@ void ARoomController::ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive)
 			_puzzleAction->DeactivatePuzzleAction();
 	}
 
-	// 트리거 비활성화 (액션이 활성화된 경우에만)
-	if (IsActive)
+	// 트리거 상태 적용
+	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleDataPtr->PuzzleTriggerArray)
 	{
-		for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData.PuzzleTriggerArray)
-		{
-			if (_puzzleTrigger == nullptr)
-				continue;
+		if (_puzzleTrigger == nullptr)
+			continue;
 
-			_puzzleTrigger->ChangeTriggerVisibility(false);
-		}
+		_puzzleTrigger->ChangeTriggerVisibility(!IsActive);
 	}
+
+	// 활성화 상태 직접 변경 (포인터를 통해 원본 배열 요소 수정)
+	_puzzleDataPtr->IsPuzzleActivated = IsActive;
 }
 
 bool ARoomController::TryGetPuzzleData(int32 PuzzleKey, FPuzzleData*& OutPuzzleData, int32& OutPuzzleIndex, int32& OutRawIndex)
