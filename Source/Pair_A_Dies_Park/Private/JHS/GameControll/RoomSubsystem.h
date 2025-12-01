@@ -9,7 +9,8 @@
 UENUM(BlueprintType)
 enum class E_ROOM_TYPE : uint8
 {
-	Boss = 0 UMETA(DisplayName = "Boss"),
+	Lobby = 0 UMETA(DisplayName = "Lobby"),
+	Boss UMETA(DisplayName = "Boss"),
 	Tutorial UMETA(DisplayName = "Tutorial"),
 	Subway UMETA(DisplayName = "Subway"),
 	Spaceship UMETA(DisplayName = "Spaceship"),

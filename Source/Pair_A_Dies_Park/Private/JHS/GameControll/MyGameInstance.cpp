@@ -82,7 +82,7 @@ void UMyGameInstance::ChangeRoom(int32 CompletedRoomIndex)
 	// 튜토리얼
 	if (CompletedRoomIndex == (int32)E_ROOM_TYPE::Tutorial)
 	{
-		// TODO : 로비 이동
+		LoadLevel((int32)E_ROOM_TYPE::Lobby);
 		return;
 	}
 
@@ -91,6 +91,8 @@ void UMyGameInstance::ChangeRoom(int32 CompletedRoomIndex)
 	{
 		_isGameClear = true;
 		GameEnd();
+
+		LoadLevel((int32)E_ROOM_TYPE::Lobby);
 		return;
 	}
 
