@@ -4,6 +4,7 @@
 #include "JHS/Puzzle/Trigger/PresenceTrigger.h"
 #include "Components/BoxComponent.h"
 #include "Split_Character.h"
+#include "Net/UnrealNetwork.h"
 
 APresenceTrigger::APresenceTrigger()
 {
@@ -25,6 +26,94 @@ APresenceTrigger::APresenceTrigger()
 void APresenceTrigger::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// _triggerMeshName으로 _rootComponent 하위의 UStaticMeshComponent 찾기
+	if (!_triggerMeshName.IsNone())
+	{
+		TArray<USceneComponent*> _childComponents;
+		_rootComponent->GetChildrenComponents(true, _childComponents);
+		
+		for (USceneComponent* _childComponent : _childComponents)
+		{
+			UStaticMeshComponent* _staticMeshComponent = Cast<UStaticMeshComponent>(_childComponent);
+			if (_staticMeshComponent && _staticMeshComponent->GetFName() == _triggerMeshName)
+			{
+				_triggerMesh = _staticMeshComponent;
+				break;
+			}
+		}
+		
+		// 직접 자식 컴포넌트에서 찾지 못한 경우 루트 컴포넌트 자체를 확인
+		if (_triggerMesh == nullptr && _rootComponent->GetFName() == _triggerMeshName)
+		{
+			_triggerMesh = Cast<UStaticMeshComponent>(_rootComponent);
+		}
+	}
+}
+
+void APresenceTrigger::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	// 복제할 속성 등록
+	DOREPLIFETIME(APresenceTrigger, _isActivated);
+}
+
+void APresenceTrigger::TriggerEnterEffect()
+{
+	// 서버에서만 상태 변경
+	if (HasAuthority())
+	{
+		_isActivated = true;
+		ChangeMaterial(true);
+	}
+}
+
+void APresenceTrigger::TriggerExitEffect()
+{
+	// 서버에서만 상태 변경
+	if (HasAuthority())
+	{
+		_isActivated = false;
+		ChangeMaterial(false);
+	}
+}
+
+void APresenceTrigger::OnRep_IsActivated()
+{
+	// 클라이언트에서 실행 - 복제된 상태에 따라 마테리얼 변경
+	ChangeMaterial(_isActivated);
+	
+	if (_isDebugLog)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnRep_IsActivated: %s"), _isActivated ? TEXT("Activated") : TEXT("Deactivated"));
+	}
+}
+
+void APresenceTrigger::ChangeMaterial(bool IsActivated)
+{
+	// 실제 마테리얼 변경 로직
+	if (!_triggerMesh)
+		return;
+
+	if (IsActivated && _matActivate)
+	{
+		_triggerMesh->SetMaterial(0, _matActivate);
+		
+		if (_isDebugLog)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ChangeMaterial: Changed material to Activate"));
+		}
+	}
+	else if (!IsActivated && _matDeactivate)
+	{
+		_triggerMesh->SetMaterial(0, _matDeactivate);
+		
+		if (_isDebugLog)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ChangeMaterial: Changed material to Deactivate"));
+		}
+	}
 }
 
 void APresenceTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

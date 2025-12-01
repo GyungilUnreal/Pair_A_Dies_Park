@@ -33,6 +33,8 @@ void APuzzleTriggerBase::OnTriggerEnter()
 	{
 		ChangeTriggerVisibility(false);
 	}
+
+	TriggerEnterEffect();
 }
 
 void APuzzleTriggerBase::OnTriggerExit()
@@ -41,6 +43,8 @@ void APuzzleTriggerBase::OnTriggerExit()
 		return;
 
 	OnChangeTriggered(false);
+
+	TriggerExitEffect();
 }
 
 void APuzzleTriggerBase::OnChangeTriggered(bool IsTriggered)
@@ -65,6 +69,9 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> Roo
 
 void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)
 {
+	if (!IsVisible && !_isDeactiveOnTrigger)
+		return;
+
 	SetActorHiddenInGame(!IsVisible);
 	SetActorEnableCollision(IsVisible);
 	SetActorTickEnabled(IsVisible);

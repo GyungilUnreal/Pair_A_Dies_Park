@@ -19,6 +19,9 @@ struct FPuzzleData
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	bool IsPuzzleActivated = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
 	bool IsLockActivatedAction = false;
 

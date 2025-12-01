@@ -37,12 +37,12 @@ protected:
 	int32 _puzzleKey = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
-	bool _isChangeImmediately = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
 	bool _isLockOnTrigger = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Visibility")
+	bool _isChangeImmediately = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Visibility")
 	bool _isDeactiveOnTrigger = false;
 
 public:
@@ -51,6 +51,10 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	virtual void TriggerEnterEffect() { }
+
+	virtual void TriggerExitEffect() { }
 
 public:	
 	// Called every frame
