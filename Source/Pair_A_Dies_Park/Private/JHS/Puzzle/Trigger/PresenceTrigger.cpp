@@ -20,7 +20,9 @@ APresenceTrigger::APresenceTrigger()
     _boxTrigger->OnComponentBeginOverlap.AddDynamic(this, &APresenceTrigger::OnOverlapBegin);
     _boxTrigger->OnComponentEndOverlap.AddDynamic(this, &APresenceTrigger::OnOverlapEnd);
 
+    // 네트워크 복제 활성화
     bReplicates = true;
+    SetReplicateMovement(true);
 }
 
 void APresenceTrigger::BeginPlay()
@@ -51,43 +53,14 @@ void APresenceTrigger::BeginPlay()
 	}
 }
 
-void APresenceTrigger::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
-	// 복제할 속성 등록
-	DOREPLIFETIME(APresenceTrigger, _isActivated);
-}
-
 void APresenceTrigger::TriggerEnterEffect()
 {
-	// 서버에서만 상태 변경
-	if (HasAuthority())
-	{
-		_isActivated = true;
-		ChangeMaterial(true);
-	}
+	ChangeMaterial(true);
 }
 
 void APresenceTrigger::TriggerExitEffect()
 {
-	// 서버에서만 상태 변경
-	if (HasAuthority())
-	{
-		_isActivated = false;
-		ChangeMaterial(false);
-	}
-}
-
-void APresenceTrigger::OnRep_IsActivated()
-{
-	// 클라이언트에서 실행 - 복제된 상태에 따라 마테리얼 변경
-	ChangeMaterial(_isActivated);
-	
-	if (_isDebugLog)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OnRep_IsActivated: %s"), _isActivated ? TEXT("Activated") : TEXT("Deactivated"));
-	}
+	ChangeMaterial(false);
 }
 
 void APresenceTrigger::ChangeMaterial(bool IsActivated)

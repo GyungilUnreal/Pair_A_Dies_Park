@@ -60,18 +60,17 @@ void AMovementAction::UpdateMovementTimer()
 	if (_currentMovementTime >= _movementDuration)
 	{
 		// 최종 위치와 회전 설정
-		_movementMesh->SetWorldLocation(_endMovementLocation);
-		_movementMesh->SetWorldRotation(_endMovementRotator);
+		MovePosition(_endMovementLocation, _endMovementRotator);
 
 		// 타이머 중지
 		StopMovement();
-		
 		return;
 	}
 
 	// 위치와 회전 보간
-	_movementMesh->SetWorldLocation(FMath::Lerp(_startMovementLocation, _endMovementLocation, _currentMovementTime / _movementDuration));
-	_movementMesh->SetWorldRotation(FMath::Lerp(_startMovementRotator, _endMovementRotator, _currentMovementTime / _movementDuration));
+	FVector _nextLocation = FMath::Lerp(_startMovementLocation, _endMovementLocation, _currentMovementTime / _movementDuration);
+	FRotator _nextRotator = FMath::Lerp(_startMovementRotator, _endMovementRotator, _currentMovementTime / _movementDuration);
+	MovePosition(_nextLocation, _nextRotator);
 
 	// 다음 업데이트를 위한 타이머 설정
 	GetWorld()->GetTimerManager().SetTimer(_movementTimerHandle, this, &AMovementAction::UpdateMovementTimer, _deltaTime, false);
@@ -80,4 +79,10 @@ void AMovementAction::UpdateMovementTimer()
 void AMovementAction::StopMovement()
 {
 	GetWorld()->GetTimerManager().ClearTimer(_movementTimerHandle);
+}
+
+void AMovementAction::MovePosition(FVector Location, FRotator Rotator)
+{
+	_movementMesh->SetWorldLocation(Location);
+	_movementMesh->SetWorldRotation(Rotator);
 }

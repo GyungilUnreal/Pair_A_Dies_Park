@@ -49,6 +49,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Puzzle|Movement Action", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMeshComponent> _movementMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle|Movement Action")
+	TObjectPtr<AActor> _moveWithActor;
+
 protected:
 	virtual void OnActivatePuzzleAction() override;
 
@@ -62,4 +65,6 @@ private:
 	void UpdateMovementTimer();
 
 	void StopMovement();
+
+	void MovePosition(FVector Location, FRotator Rotator);
 };

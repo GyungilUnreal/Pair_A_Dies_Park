@@ -16,6 +16,8 @@ public:
 	APuzzleActionBase();
 
 private:
+	// 액션 활성화 상태 (복제됨)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_IsActivate)
 	bool _isActivate = false;
 
 protected:
@@ -31,16 +33,22 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	// 상속 구현
+	virtual void OnActivatePuzzleAction() { }
 
+	virtual void OnDeactivatePuzzleAction() { }
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 protected:
-	// 상속 구현
-	virtual void OnActivatePuzzleAction() { }
-
-	virtual void OnDeactivatePuzzleAction() { }
+	// 복제 상태가 변경되었을 때 호출되는 함수
+	UFUNCTION()
+	void OnRep_IsActivate();
+	
+	// 네트워크 복제 설정
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	void InitializePuzzleAction();
