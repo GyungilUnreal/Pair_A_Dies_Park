@@ -32,6 +32,10 @@ private:
 
 	FTimerHandle _movementTimerHandle;
 #pragma endregion Movement Action
+
+	// 이동할 액터의 초기 상대 위치와 회전 차이
+	FVector _moveWithActorOffset;
+	FRotator _moveWithActorRotationDiff;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Components")
@@ -53,6 +57,10 @@ protected:
 	TObjectPtr<AActor> _moveWithActor;
 
 protected:
+	virtual void PreInitializeComponents();
+
+	virtual void BeginPlay() override;
+
 	virtual void OnActivatePuzzleAction() override;
 
 	virtual void OnDeactivatePuzzleAction() override;
