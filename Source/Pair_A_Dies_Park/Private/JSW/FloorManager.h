@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "FloorManager.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeamLifeChanged, int32, NewLife);
+
 USTRUCT(BlueprintType)
 struct FTileData
 {
@@ -49,8 +51,14 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UPROPERTY(ReplicatedUsing = OnRep_TeamLife)
+	int32 TeamLife = 5;
+
 	UFUNCTION()
 	void OnRep_GridData();
+
+	UFUNCTION()
+	void OnRep_TeamLife();
 
 	// 데이터 상태(HP)를 보고 액터를 숨기거나 머티리얼을 바꿈
 	void UpdateVisualsFromState();
@@ -72,4 +80,17 @@ public:
 	// 타일 복구 (서버 전용)
 	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
 	void Server_RestoreRandomTiles(int32 Layer, int32 Count);
+	
+	// 리스폰 할 타일 랜덤으로 찾기.
+	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
+	FVector GetRandomSafeFloorLocation();
+
+	// 팀 목숨 관리 함수
+	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
+	void ModifyTeamLife(int32 Amount);
+
+	// UI 바인딩용 함수.
+	UPROPERTY(BlueprintAssignable, Category = "Floor Manager")
+	FOnTeamLifeChanged OnTeamLifeChanged;
+
 };

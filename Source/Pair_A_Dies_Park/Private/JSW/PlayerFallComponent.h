@@ -6,6 +6,10 @@
 #include "Components/ActorComponent.h"
 #include "PlayerFallComponent.generated.h"
 
+class UAnimMontage;
+class AFloorManager;
+class ACharacter;
+
 UENUM(BlueprintType)
 enum class EFallState : uint8
 {
@@ -15,6 +19,7 @@ enum class EFallState : uint8
 	Climbing
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClimbGaugeChanged, float, GaugeRatio);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class UPlayerFallComponent : public UActorComponent
@@ -28,13 +33,16 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentState)
 	EFallState CurrentState = EFallState::Normal;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StartRescuerAction(ACharacter* RescuerChar, float Duration);
+
+	void FinishRescuerAction(ACharacter* RescuerChar);
 
 	UFUNCTION()
 	void OnRep_CurrentState();
@@ -58,6 +66,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fall|Animation")
 	TObjectPtr<UAnimMontage> ClimbUpMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fall|Animation")
+	TObjectPtr<UAnimMontage> RescueMontage;
 
 	// 기준 손 소켓
 	UPROPERTY(EditAnywhere, Category = "Fall|Animation")
@@ -83,6 +94,12 @@ protected:
 
 	void OnHangTimerExpired();
 
+	void PerformWallDrop();
+
+	void RespawnAtFloor1();
+	
+	void StartHanging(const FHitResult& WallHit, const FVector& LedgeLoc);
+
 	UPROPERTY(EditAnywhere, Category = "Fall|Settings")
 	float LedgeRegrabCooldown = 3.f;
 
@@ -90,9 +107,35 @@ protected:
 
 	bool bCanGrabLedge = true;
 
+	float CurrentClimbGauge = 0.0f;
+	const float MaxClimbGauge = 100.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Fall|Settings")
+	float GaugeIncreasePerPress = 15.0f; // 한 번 누를 때 차는 양
+
+	UPROPERTY(EditAnywhere, Category = "Fall|Settings")
+	float GaugeDecayRate = 30.0f; // 초당 줄어드는 양 (안 누르면 떨어짐
+
+	UFUNCTION(Server,Reliable)
+	void Server_LetGo();
+
+	UFUNCTION(Server,Reliable)
+	void Server_ClimbUpSelf();
+
 public:
 	// 외부에서 호출할 함수.
 	UFUNCTION(BlueprintCallable, Category = "Fall|Interaction")
-	void TryRescue(AActor* RescuerActor);
+	void TryRescue(AActor* RescuerActor = nullptr);
 
+	UFUNCTION(BlueprintCallable, Category = "Fall|Action")
+	void ClimbUpSelf();
+
+	UFUNCTION(BlueprintCallable, Category = "Fall|Action")
+	void LetGo();
+
+	UFUNCTION(BlueprintCallable, Category = "Fall|Action")
+	void Input_MashF();
+
+	UPROPERTY(BlueprintAssignable, Category = "Fall|UI")
+	FOnClimbGaugeChanged OnClimbGaugeChanged;
 };
