@@ -13,6 +13,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class ABaseWeapon;
 struct FInputActionValue;
 
 UCLASS(config=Game)
@@ -49,6 +50,14 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EquipWeapon(ABaseWeapon* NewWeapon);
+
+	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Anim")
+	float GetAO_Pitch();
+
 protected:
 
 	/** Called for movement input */
@@ -65,24 +74,56 @@ protected:
 	// To add mapping context
 	virtual void BeginPlay();
 
-	// Ability System Component (PawnÀÌ Á÷Á¢ ¼ÒÀ¯)
+	// Ability System Component (Pawnì´ ì§ì ‘ ì†Œìœ )
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComp;
 
-	// PawnÀÌ »ç¿ëÇÒ ±âº» Ability ¸ñ·Ï
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	ABaseWeapon* EquippedWeapon;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsAiming, VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bIsAiming = false;
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetAiming(bool bNewState);
+
+	UFUNCTION()
+	void OnRep_IsAiming();
+
+	void UpdateAimingState();
+
+	// Pawnì´ ì‚¬ìš©í•  ê¸°ë³¸ Ability ëª©ë¡
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 
-	// PawnÀÌ ½ÃÀÛ ½Ã Ability¸¦ ºÎ¿©¹Ş¾Ò´ÂÁö ¿©ºÎ
+	// Pawnì´ ì‹œì‘ ì‹œ Abilityë¥¼ ë¶€ì—¬ë°›ì•˜ëŠ”ì§€ ì—¬ë¶€
 	bool bAbilitiesGranted = false;
 
-	// Ability ÃÊ±âÈ­ ÇÔ¼ö
+	// Ability ì´ˆê¸°í™” í•¨ìˆ˜
 	void InitializeAbilities();
 
 	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void OnRep_PlayerState() override;
 
+	// ì¢Œí´ë¦­ ê³µê²© ì…ë ¥ ì•¡ì…˜
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+	// ì¡°ì¤€ ì…ë ¥ ì•¡ì…˜
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AimAction;
+
+	// ê³µê²© í•¸ë“¤ëŸ¬
+	void Input_Attack();
+	// í•¸ë“¤ëŸ¬ í•¨ìˆ˜
+	void Input_Aim_Start(); // ëˆ„ë¦„
+	void Input_Aim_Stop();  // ë—Œ
+
+	// ì¤Œ ê´€ë ¨ ì„¤ì •
+	float DefaultFOV = 90.0f; // í‰ì†Œ ì‹œì•¼ê°
+	float AimFOV = 60.0f;     // ì¤Œ í–ˆì„ ë•Œ ì‹œì•¼ê°
+	float ZoomInterpSpeed = 15.0f; // ì¤Œ ì†ë„
+	
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

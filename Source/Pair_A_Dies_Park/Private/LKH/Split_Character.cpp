@@ -13,6 +13,8 @@
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemGlobals.h"
 #include "CharacterFunctionLibrary.h"
+#include "JSW/Weapon/BaseWeapon.h"
+#include "Net/UnrealNetwork.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ASplit_Character
@@ -54,7 +56,7 @@ ASplit_Character::ASplit_Character()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-		// ASC ���� (Pawn ����)
+		// ASC 생성 (Pawn 소유)
 	AbilitySystemComp = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComp"));
 	AbilitySystemComp->SetIsReplicated(true);
 	AbilitySystemComp->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
@@ -63,6 +65,37 @@ ASplit_Character::ASplit_Character()
 UAbilitySystemComponent* ASplit_Character::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComp;
+}
+
+void ASplit_Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// EquippedWeapon 변수를 네트워크 동기화하겠다고 등록
+	DOREPLIFETIME(ASplit_Character, EquippedWeapon);
+
+	DOREPLIFETIME(ASplit_Character, bIsAiming);
+}
+
+void ASplit_Character::EquipWeapon(ABaseWeapon* NewWeapon)
+{
+	if (NewWeapon)
+	{
+		EquippedWeapon = NewWeapon;
+
+		EquippedWeapon->SetOwner(this);
+
+		FName SocketName = TEXT("WeaponSocket");
+
+		if (GetMesh()->DoesSocketExist(SocketName))
+		{
+			EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+		}
+		else
+		{
+			EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+		}
+	}
 }
 
 void ASplit_Character::BeginPlay()
@@ -79,9 +112,13 @@ void ASplit_Character::BeginPlay()
 		}
 	}
 
-	if (HasAuthority()) // ���������� Ability �ο�
+	if (HasAuthority()) // 서버에서만 Ability 부여
 	{
 		InitializeAbilities();
+	}
+	if (FollowCamera)
+	{
+		DefaultFOV = FollowCamera->FieldOfView; // 원래 설정된 값 가져오기
 	}
 }
 
@@ -102,6 +139,11 @@ void ASplit_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASplit_Character::Look);
+		// 공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Attack);
+		// 줌인, 줌아웃
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Aim_Start);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Aim_Stop);
 	}
 }
 
@@ -141,7 +183,35 @@ void ASplit_Character::Look(const FInputActionValue& Value)
 	}
 }
 
-// Ability �ʱ�ȭ �Լ�
+void ASplit_Character::Server_SetAiming_Implementation(bool bNewState)
+{
+	bIsAiming = bNewState;
+
+	OnRep_IsAiming();
+}
+
+void ASplit_Character::OnRep_IsAiming()
+{
+	UpdateAimingState();
+}
+
+void ASplit_Character::UpdateAimingState()
+{
+	if (bIsAiming)
+	{
+		bUseControllerRotationYaw = true;
+
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+	}
+	else
+	{
+		bUseControllerRotationYaw = false;
+
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+	}
+}
+
+// Ability 초기화 함수
 void ASplit_Character::InitializeAbilities()
 {
 	if (bAbilitiesGranted || !AbilitySystemComp) return;
@@ -167,4 +237,59 @@ void ASplit_Character::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 	AbilitySystemComp->InitAbilityActorInfo(this, this);
+}
+
+void ASplit_Character::Input_Attack()
+{
+	// 무기가 있으면 무기 발사
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->Fire();
+	}
+}
+
+void ASplit_Character::Input_Aim_Start()
+{
+	if (EquippedWeapon)
+	{
+		bIsAiming = true;
+		UpdateAimingState();
+		Server_SetAiming(true);
+	}
+}
+
+void ASplit_Character::Input_Aim_Stop()
+{
+	bIsAiming = false;
+	UpdateAimingState();
+	Server_SetAiming(false);
+}
+
+void ASplit_Character::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (FollowCamera)
+	{
+		// 목표 FOV 설정
+		float TargetFOV = bIsAiming ? AimFOV : DefaultFOV;
+
+		// 현재 FOV에서 목표 FOV로 보간
+		float NewFOV = FMath::FInterpTo(FollowCamera->FieldOfView, TargetFOV, DeltaTime, ZoomInterpSpeed);
+
+		FollowCamera->SetFieldOfView(NewFOV);
+	}
+}
+
+float ASplit_Character::GetAO_Pitch()
+{
+	FRotator AO_Rot = GetBaseAimRotation();
+
+	float Pitch = AO_Rot.Pitch;
+
+	if (Pitch > 100.0f)
+	{
+		Pitch -= 360;
+	}
+	return FMath::Clamp(Pitch, -90.0f, 90.0f);
 }
