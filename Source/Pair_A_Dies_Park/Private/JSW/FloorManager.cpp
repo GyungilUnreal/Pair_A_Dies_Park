@@ -15,6 +15,7 @@ void AFloorManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AFloorManager, GridData);
+	DOREPLIFETIME(AFloorManager, TeamLife);
 }
 
 void AFloorManager::BeginPlay()
@@ -83,6 +84,11 @@ void AFloorManager::BeginPlay()
 void AFloorManager::OnRep_GridData()
 {
 	UpdateVisualsFromState();
+}
+
+void AFloorManager::OnRep_TeamLife()
+{
+	OnTeamLifeChanged.Broadcast(TeamLife);
 }
 
 void AFloorManager::UpdateVisualsFromState()
@@ -213,5 +219,56 @@ void AFloorManager::Server_RestoreRandomTiles(int32 Layer, int32 Count)
 			BrokenIndices.RemoveAt(RandIdx); // 중복 방지
 		}
 		UpdateVisualsFromState();
+	}
+}
+
+FVector AFloorManager::GetRandomSafeFloorLocation()
+{
+	TArray<AActor*> SafeCandidates;
+	TArray<AActor*> AllFloor1Candidates; // HP 상관없이 1층
+
+	for (const FTileData& Tile : GridData)
+	{
+		if (Tile.VisualActor)
+		{
+			if (FMath::IsNearlyEqual(Tile.VisualActor->GetActorLocation().Z, Floor1_Height, 500.0f))
+			{
+				// 1층인 애들은 다 모아둠
+				AllFloor1Candidates.Add(Tile.VisualActor);
+
+				if (Tile.HP > 0 && Tile.HP < 10)
+				{
+					SafeCandidates.Add(Tile.VisualActor);
+				}
+			}
+		}
+	}
+
+	if (SafeCandidates.Num() > 0)
+	{
+		int32 RandIdx = FMath::RandRange(0, SafeCandidates.Num() - 1);
+		return SafeCandidates[RandIdx]->GetActorLocation() + FVector(0.0f, 0.0f, 2000.0f);
+	}
+
+	if (AllFloor1Candidates.Num() > 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("!!! NO SAFE TILES! Spawning on random broken tile !!!"));
+		int32 RandIdx = FMath::RandRange(0, AllFloor1Candidates.Num() - 1);
+		return AllFloor1Candidates[RandIdx]->GetActorLocation() + FVector(0.0f, 0.0f, 150.0f);
+	}
+	return GetActorLocation() + FVector(0.0f, 0.0f, 200.0f);
+}
+
+void AFloorManager::ModifyTeamLife(int32 Amount)
+{
+	if (!HasAuthority()) return;
+
+	TeamLife = FMath::Clamp(TeamLife - Amount, 0, 5);
+
+	OnRep_TeamLife();
+
+	if (TeamLife <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GAME OVERRRRR"));
 	}
 }
