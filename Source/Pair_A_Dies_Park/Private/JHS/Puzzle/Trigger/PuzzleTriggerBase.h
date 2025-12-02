@@ -41,6 +41,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
 	bool _isLockOnTrigger = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Timer")
+	bool _isTimerTrigger = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Visibility")
 	bool _isChangeImmediately = false;
 
@@ -49,6 +52,8 @@ protected:
 
 public:
 	bool IsTriggered() { return _isTriggered; }
+
+	bool IsTimerTrigger() { return _isTimerTrigger; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -78,6 +83,12 @@ protected:
 
 public:
 	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
+
+	// 트리거 상태를 초기화하는 함수 (서버 RPC)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ResetTrigger();
+	
+	void ResetTrigger();
 
 	void ChangeTriggerVisibility(bool IsVisible);
 

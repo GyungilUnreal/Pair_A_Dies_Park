@@ -86,8 +86,32 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> Roo
 {
 	_roomController = RoomController;
 	_puzzleKey = PuzzleKey;
+	ResetTrigger();
+}
+
+void APuzzleTriggerBase::Multicast_ResetTrigger_Implementation()
+{
+	// 모든 클라이언트에서 실행
+	bool _wasTriggered = _isTriggered;
 	_isTriggered = false;
 	ChangeTriggerVisibility(true);
+	
+	// 서버나 리슨 서버에서는 OnRep_IsTriggered가 호출되지 않으므로 직접 효과 적용
+	// 일반 클라이언트에서는 _isTriggered 변경으로 OnRep_IsTriggered가 자동 호출됨
+	if (HasAuthority() && _wasTriggered)
+	{
+		OnChangeIsTrigger(false);
+	}
+}
+
+void APuzzleTriggerBase::ResetTrigger()
+{
+	// 서버에서만 실행
+	if (HasAuthority())
+	{
+		// 모든 클라이언트에 멀티캐스트 호출
+		Multicast_ResetTrigger();
+	}
 }
 
 void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)
