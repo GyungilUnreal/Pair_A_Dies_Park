@@ -22,14 +22,22 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
 	bool IsPuzzleActivated = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Lock")
 	bool IsLockActivatedAction = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Trigger")
 	TArray<TObjectPtr<APuzzleTriggerBase>> PuzzleTriggerArray;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Action")
 	TArray<TObjectPtr<APuzzleActionBase>> PuzzleActionArray;
+
+	// Timer Trigger
+	TMap<int32, bool> TimerTriggerMap;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Timer")
+	float TimerLimit = 1.0f;
+
+	FTimerHandle TriggerTimerHandle;
 };
 
 UCLASS()
@@ -77,9 +85,9 @@ public:
 public:
 	// 클라이언트에서 서버로 트리거 상태 변경 요청
 	UFUNCTION(Server, Reliable)
-	void Server_ChangePuzzleTriggerState(int32 TriggerKey, bool IsTriggered);
+	void Server_ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
 	
-	void ChangePuzzleTriggerState(int32 TriggerKey, bool IsTriggered);
+	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
 
 	void OnActionDeactivated(int32 PuzzleKey);
 
@@ -100,6 +108,25 @@ private:
 	void ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive);
 
 	bool TryGetPuzzleData(int32 PuzzleKey, FPuzzleData*& OutPuzzleData, int32& OutPuzzleIndex, int32& OutRawIndex);
+
+	bool CheckAllTimerTriggerValue(FPuzzleData* PuzzleDataPtr, bool hopeResult);
+
+	// 트리거 타이머 관련 서버 RPC 함수
+	UFUNCTION(Server, Reliable)
+	void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
+	
+	void SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ClearTriggerTimer(int32 PuzzleIndex);
+	
+	void ClearTriggerTimer(int32 PuzzleIndex);
+	
+	// 타이머 시간 초과 콜백
+	void OnPuzzleTriggerTimeOut(FPuzzleData* PuzzleDataPtr);
+
+	// 타이머 핸들 초기화
+	void ClearTriggerTimerHandle(FPuzzleData* PuzzleDataPtr);
 
 	//bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 };

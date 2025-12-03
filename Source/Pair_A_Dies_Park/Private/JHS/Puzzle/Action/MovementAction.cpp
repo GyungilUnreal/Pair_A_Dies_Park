@@ -41,24 +41,17 @@ void AMovementAction::BeginPlay()
 
 void AMovementAction::OnActivatePuzzleAction()
 {
-    Super::OnActivatePuzzleAction();
-
-    _isActivate = true;
-	StopMovement();
 	StartMovement();
 }
 
 void AMovementAction::OnDeactivatePuzzleAction()
 {
-    Super::OnDeactivatePuzzleAction();
-
-    _isActivate = false;
-	StopMovement();
 	StartMovement();
 }
 
 void AMovementAction::StartMovement()
 {
+	StopMovement();
 	_currentMovementTime = 0.0f;
 
 	// 시작 위치와 회전값 설정

@@ -25,22 +25,22 @@ private:
 	TObjectPtr<UStaticMeshComponent> _triggerMesh = nullptr;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Components")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Trigger|Puzzle|Components")
 	TObjectPtr<UStaticMeshComponent> _rootComponent = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Debug")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Presence Trigger|Debug")
 	bool _isDebugLog = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Player Count")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Presence Trigger|Player Count")
 	int32 _requirePlayerCount = 1;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Material")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trigger|Presence Trigger|Material")
 	FName _triggerMeshName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Material")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trigger|Presence Trigger|Material")
 	TObjectPtr<UMaterial> _matDeactivate = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Presence Trigger|Material")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trigger|Presence Trigger|Material")
 	TObjectPtr<UMaterial> _matActivate = nullptr;
 
 protected:

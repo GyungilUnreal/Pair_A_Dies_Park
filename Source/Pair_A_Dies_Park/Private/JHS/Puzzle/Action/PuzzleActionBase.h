@@ -15,12 +15,11 @@ public:
 	// Sets default values for this actor's properties
 	APuzzleActionBase();
 
-private:
+protected:
 	// 액션 활성화 상태 (복제됨)
 	UPROPERTY(Replicated, ReplicatedUsing = OnRep_IsActivate)
 	bool _isActivate = false;
 
-protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Puzzle|Debug")
 	bool _isDebug = false;
 
