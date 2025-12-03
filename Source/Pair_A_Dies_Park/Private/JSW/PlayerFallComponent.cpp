@@ -62,7 +62,7 @@ void UPlayerFallComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	}
 	else if (OwnerCharacter)
 	{
-		if (OwnerCharacter->GetActorLocation().Z < MinKillZThreshold)
+		if (OwnerCharacter->GetActorLocation().Z < MinKillZThreshold && OwnerCharacter->GetActorLocation().Z > 30000)
 		{
 			RespawnAtFloor1();
 		}
