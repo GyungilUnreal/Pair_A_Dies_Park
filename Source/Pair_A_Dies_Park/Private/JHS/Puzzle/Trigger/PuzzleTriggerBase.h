@@ -38,16 +38,16 @@ protected:
 protected:
 	int32 _puzzleKey = -1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Trigger")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Trigger")
 	bool _isLockOnTrigger = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Timer")
 	bool _isTimerTrigger = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Visibility")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
 	bool _isChangeImmediately = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Presence Trigger|Visibility")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
 	bool _isDeactiveOnTrigger = false;
 
 public:

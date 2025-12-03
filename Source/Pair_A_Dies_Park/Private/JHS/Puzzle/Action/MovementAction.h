@@ -17,8 +17,6 @@ public:
 	AMovementAction();
 
 private:
-	bool _isActivate = false;
-
 #pragma region Movement Action
 	FVector _startMovementLocation;
 
@@ -64,8 +62,6 @@ protected:
 	virtual void OnActivatePuzzleAction() override;
 
 	virtual void OnDeactivatePuzzleAction() override;
-
-public:
 
 private:
 	void StartMovement();
