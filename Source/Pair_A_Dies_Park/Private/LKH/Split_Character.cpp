@@ -56,7 +56,7 @@ ASplit_Character::ASplit_Character()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-		// ASC 생성 (Pawn 소유)
+		// ASC ?앹꽦 (Pawn ?뚯쑀)
 	AbilitySystemComp = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComp"));
 	AbilitySystemComp->SetIsReplicated(true);
 	AbilitySystemComp->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
@@ -71,7 +71,7 @@ void ASplit_Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// EquippedWeapon 변수를 네트워크 동기화하겠다고 등록
+	// EquippedWeapon 蹂?섎? ?ㅽ듃?뚰겕 ?숆린?뷀븯寃좊떎怨??깅줉
 	DOREPLIFETIME(ASplit_Character, EquippedWeapon);
 
 	DOREPLIFETIME(ASplit_Character, bIsAiming);
@@ -112,13 +112,13 @@ void ASplit_Character::BeginPlay()
 		}
 	}
 
-	if (HasAuthority()) // 서버에서만 Ability 부여
+	if (HasAuthority()) // ?쒕쾭?먯꽌留?Ability 遺??
 	{
 		InitializeAbilities();
 	}
 	if (FollowCamera)
 	{
-		DefaultFOV = FollowCamera->FieldOfView; // 원래 설정된 값 가져오기
+		DefaultFOV = FollowCamera->FieldOfView; // ?먮옒 ?ㅼ젙??媛?媛?몄삤湲?
 	}
 }
 
@@ -139,9 +139,9 @@ void ASplit_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASplit_Character::Look);
-		// 공격
+		// 怨듦꺽
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Attack);
-		// 줌인, 줌아웃
+		// 以뚯씤, 以뚯븘??
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Aim_Start);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Aim_Stop);
 	}
@@ -177,10 +177,10 @@ void ASplit_Character::Look(const FInputActionValue& Value)
 
 	if (Controller != nullptr)
 	{
-		// 1) ���� ����
+		// 1) 감도 적용
 		LookAxisVector *= MouseSensitivity;
 
-		// 2) �ι�Ʈ Y ����
+		// 2) 인버트 Y 적용
 		float Yaw = LookAxisVector.X;
 		float Pitch = LookAxisVector.Y;
 
@@ -189,7 +189,7 @@ void ASplit_Character::Look(const FInputActionValue& Value)
 			Pitch = -Pitch;
 		}
 
-		// 3) ��Ʈ�ѷ��� �Է� �ݿ�
+		// 3) 컨트롤러에 입력 반영
 		AddControllerYawInput(Yaw);
 		AddControllerPitchInput(Pitch);
 	}
@@ -223,7 +223,7 @@ void ASplit_Character::UpdateAimingState()
 	}
 }
 
-// Ability 초기화 함수
+// Ability 珥덇린???⑥닔
 void ASplit_Character::InitializeAbilities()
 {
 	if (bAbilitiesGranted || !AbilitySystemComp) return;
@@ -253,7 +253,7 @@ void ASplit_Character::OnRep_PlayerState()
 
 void ASplit_Character::Input_Attack()
 {
-	// 무기가 있으면 무기 발사
+	// 臾닿린媛 ?덉쑝硫?臾닿린 諛쒖궗
 	if (EquippedWeapon)
 	{
 		EquippedWeapon->Fire();
@@ -283,10 +283,10 @@ void ASplit_Character::Tick(float DeltaTime)
 
 	if (FollowCamera)
 	{
-		// 목표 FOV 설정
+		// 紐⑺몴 FOV ?ㅼ젙
 		float TargetFOV = bIsAiming ? AimFOV : DefaultFOV;
 
-		// 현재 FOV에서 목표 FOV로 보간
+		// ?꾩옱 FOV?먯꽌 紐⑺몴 FOV濡?蹂닿컙
 		float NewFOV = FMath::FInterpTo(FollowCamera->FieldOfView, TargetFOV, DeltaTime, ZoomInterpSpeed);
 
 		FollowCamera->SetFieldOfView(NewFOV);

@@ -34,6 +34,9 @@ protected:
 
 	FVector InitialSpawnLocation;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Floor ValZ")
+	float MinKillZThreshold = -FLT_MAX;
+
 	// State Logic
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentState)
 	EFallState CurrentState = EFallState::Normal;

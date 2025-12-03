@@ -27,6 +27,14 @@ void UPlayerFallComponent::BeginPlay()
 	{
 		InitialSpawnLocation = OwnerCharacter->GetActorLocation();
 	}
+	if (FloorManager)
+	{
+		MinKillZThreshold = FloorManager->Floor1_Height - 2000.0f;
+	}
+	else
+	{
+		MinKillZThreshold = InitialSpawnLocation.Z - 2000.0f;
+	}
 }
 
 void UPlayerFallComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -52,9 +60,9 @@ void UPlayerFallComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 			ChangeState(EFallState::Normal);
 		}
 	}
-	else
+	else if (OwnerCharacter)
 	{
-		if (OwnerCharacter->GetActorLocation().Z < 41000.0f)
+		if (OwnerCharacter->GetActorLocation().Z < MinKillZThreshold)
 		{
 			RespawnAtFloor1();
 		}
