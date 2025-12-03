@@ -4,6 +4,7 @@
 #include "JSW/FloorTile.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerStart.h"
 
 AFloorManager::AFloorManager()
 {
@@ -22,11 +23,23 @@ void AFloorManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// AFloorTile 클래스로 모든 큐브 찾기
 	TArray<AActor*> FoundCubes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorTile::StaticClass(), FoundCubes);
 
-	// 162개가 맞는지 확인 (1층 81 + 2층 81)
+	TArray<AActor*> FoundStarts;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), FoundStarts);
+
+	if (FoundStarts.Num() > 0)
+	{
+		for (AActor* StartActor : FoundStarts)
+		{
+			InitialSpawnLocations.Add(StartActor->GetActorLocation());
+		}
+	}
+	else
+	{
+		InitialSpawnLocations.Add(GetActorLocation() + FVector(0, 0, 200));
+	}
 	const int32 ExpectedCount = TilesPerLayer * 2;
 
 	if (FoundCubes.Num() < ExpectedCount)
@@ -39,40 +52,35 @@ void AFloorManager::BeginPlay()
 		FVector LocA = A.GetActorLocation();
 		FVector LocB = B.GetActorLocation();
 
-		// 1순위: Z축 (층 구분) - 오차범위 넉넉히
+		// 1순위 Z축 
 		if (FMath::Abs(LocA.Z - LocB.Z) > 1000.0f)
 		{
-			return LocA.Z < LocB.Z; // 1층(낮음)이 먼저
+			return LocA.Z < LocB.Z; // 1층이 먼저
 		}
-		// 2순위: X축
+		// 2순위 X축
 		if (FMath::Abs(LocA.X - LocB.X) > 10.0f)
 		{
 			return LocA.X < LocB.X;
 		}
-		// 3순위: Y축
+		// 3순위 Y축
 		return LocA.Y < LocB.Y;
 	});
-
-	// 데이터 배열 초기화
-	// 서버: 초기값 설정 / 클라이언트: 배열 크기 확보 및 액터 매핑
 
 	GridData.SetNum(FoundCubes.Num());
 
 	for (int32 i = 0; i < FoundCubes.Num(); ++i)
 	{
-		// 액터 연결
 		GridData[i].VisualActor = FoundCubes[i];
 
 		if (HasAuthority())
 		{
-			GridData[i].HP = 2; // 기본 체력 2
+			GridData[i].HP = 2;
 
-			// 보스 발판(파괴 불가) 처리
 			if (AFloorTile* Tile = Cast<AFloorTile>(FoundCubes[i]))
 			{
 				if (Tile->bIsBossPlatform)
 				{
-					GridData[i].HP = 255; // 255를 파괴 불가(무적)으로 약속
+					GridData[i].HP = 255;
 				}
 			}
 		}
@@ -97,10 +105,8 @@ void AFloorManager::UpdateVisualsFromState()
 	{
 		if (Tile.VisualActor)
 		{
-			// HP > 0 이면 보임, 0이면 숨김
 			bool bVisible = (Tile.HP > 0);
 
-			// 숨김 처리
 			Tile.VisualActor->SetActorHiddenInGame(!bVisible);
 			Tile.VisualActor->SetActorEnableCollision(bVisible);
 
@@ -111,28 +117,24 @@ void AFloorManager::UpdateVisualsFromState()
 
 bool AFloorManager::WorldToGridIndex(FVector WorldPos, int32& OutLayer, FIntPoint& OutCoord)
 {
-	// 층 판별 (중간값 기준)
 	float MidHeight = (Floor1_Height + Floor2_Height) * 0.5f;
 
 	if (WorldPos.Z >= MidHeight)
 	{
-		OutLayer = 1; // 2층
+		OutLayer = 1;
 	}
 	else
 	{
-		OutLayer = 0; // 1층
+		OutLayer = 0;
 	}
 
-	// 안전 장치 (너무 아래면 맵 밖)
 	if (WorldPos.Z < (Floor1_Height - 3000.0f))
 	{
 		return false;
 	}
 
-	// 로컬 좌표 (매니저 기준)
 	FVector RelativePos = WorldPos - GetActorLocation();
 
-	// 인덱스 계산
 	int32 X = FMath::RoundToInt(RelativePos.X / TileSize);
 	int32 Y = FMath::RoundToInt(RelativePos.Y / TileSize);
 
@@ -176,13 +178,11 @@ void AFloorManager::Server_DamageTile(int32 Layer, FIntPoint Coord, int32 Damage
 	{
 		uint8 CurrentHP = GridData[Index].HP;
 
-		// 무적(255)이거나 이미 파괴된(0) 경우 무시
 		if (CurrentHP == 255 || CurrentHP == 0) return;
 
 		int32 NewHP = (int32)CurrentHP - DamageAmount;
 		GridData[Index].HP = (uint8)FMath::Max(0, NewHP);
 
-		// 서버 비주얼 갱신 (리플리케이션은 자동)
 		UpdateVisualsFromState();
 	}
 }
@@ -191,7 +191,6 @@ void AFloorManager::Server_RestoreRandomTiles(int32 Layer, int32 Count)
 {
 	if (!HasAuthority()) return;
 
-	// 파괴된(HP=0) 타일들의 인덱스를 모음
 	TArray<int32> BrokenIndices;
 	int32 StartIndex = Layer * TilesPerLayer;
 	int32 EndIndex = StartIndex + TilesPerLayer;
@@ -204,7 +203,6 @@ void AFloorManager::Server_RestoreRandomTiles(int32 Layer, int32 Count)
 		}
 	}
 
-	// 셔플 후 복구
 	if (BrokenIndices.Num() > 0)
 	{
 		int32 RestoreCount = FMath::Min(Count, BrokenIndices.Num());
@@ -214,9 +212,9 @@ void AFloorManager::Server_RestoreRandomTiles(int32 Layer, int32 Count)
 			int32 RandIdx = FMath::RandRange(0, BrokenIndices.Num() - 1);
 			int32 TargetIndex = BrokenIndices[RandIdx];
 
-			GridData[TargetIndex].HP = 2; // 체력 2로 복구
+			GridData[TargetIndex].HP = 2;
 
-			BrokenIndices.RemoveAt(RandIdx); // 중복 방지
+			BrokenIndices.RemoveAt(RandIdx);
 		}
 		UpdateVisualsFromState();
 	}
@@ -225,21 +223,14 @@ void AFloorManager::Server_RestoreRandomTiles(int32 Layer, int32 Count)
 FVector AFloorManager::GetRandomSafeFloorLocation()
 {
 	TArray<AActor*> SafeCandidates;
-	TArray<AActor*> AllFloor1Candidates; // HP 상관없이 1층
 
 	for (const FTileData& Tile : GridData)
 	{
-		if (Tile.VisualActor)
+		if (Tile.VisualActor && Tile.HP > 0)
 		{
 			if (FMath::IsNearlyEqual(Tile.VisualActor->GetActorLocation().Z, Floor1_Height, 500.0f))
 			{
-				// 1층인 애들은 다 모아둠
-				AllFloor1Candidates.Add(Tile.VisualActor);
-
-				if (Tile.HP > 0 && Tile.HP < 10)
-				{
-					SafeCandidates.Add(Tile.VisualActor);
-				}
+				SafeCandidates.Add(Tile.VisualActor);
 			}
 		}
 	}
@@ -250,13 +241,13 @@ FVector AFloorManager::GetRandomSafeFloorLocation()
 		return SafeCandidates[RandIdx]->GetActorLocation() + FVector(0.0f, 0.0f, 2000.0f);
 	}
 
-	if (AllFloor1Candidates.Num() > 0)
+	if (InitialSpawnLocations.Num() > 0)
 	{
-		UE_LOG(LogTemp, Error, TEXT("!!! NO SAFE TILES! Spawning on random broken tile !!!"));
-		int32 RandIdx = FMath::RandRange(0, AllFloor1Candidates.Num() - 1);
-		return AllFloor1Candidates[RandIdx]->GetActorLocation() + FVector(0.0f, 0.0f, 150.0f);
+		int32 RandIdx = FMath::RandRange(0, InitialSpawnLocations.Num() - 1);
+		return InitialSpawnLocations[RandIdx];
 	}
-	return GetActorLocation() + FVector(0.0f, 0.0f, 200.0f);
+
+	return GetActorLocation() + FVector(0.0f, 0.0f, 300.0f);
 }
 
 void AFloorManager::ModifyTeamLife(int32 Amount)

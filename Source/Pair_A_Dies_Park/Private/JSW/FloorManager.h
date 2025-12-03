@@ -44,6 +44,9 @@ protected:
 	const int32 GridWidth = 9;
 	const int32 TilesPerLayer = 81; // 9*9
 
+	UPROPERTY()
+	TArray<FVector> InitialSpawnLocations;
+
 	// 타일 사이즈
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")
 	float TileSize = 1320.0f;
