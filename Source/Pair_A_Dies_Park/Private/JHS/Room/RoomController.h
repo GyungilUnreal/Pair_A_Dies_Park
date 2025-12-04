@@ -14,27 +14,30 @@ class APresenceTrigger;
 class APuzzleActionBase;
 
 USTRUCT(BlueprintType)
-struct FPuzzleData
+struct FPuzzleGroup
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group")
+	FName _puzzleGroupName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Puzzle Group")
 	bool IsPuzzleActivated = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Lock")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Lock")
 	bool IsLockActivatedAction = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Trigger")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Trigger")
 	TArray<TObjectPtr<APuzzleTriggerBase>> PuzzleTriggerArray;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Action")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Action")
 	TArray<TObjectPtr<APuzzleActionBase>> PuzzleActionArray;
 
 	// Timer Trigger
 	TMap<int32, bool> TimerTriggerMap;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Data|Timer")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Timer")
 	float TimerLimit = 1.0f;
 
 	FTimerHandle TriggerTimerHandle;
@@ -66,7 +69,7 @@ protected:
 	E_ROOM_TYPE _roomType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Room Controller|Puzzle")
-	TArray<FPuzzleData> _puzzleDataArray = TArray<FPuzzleData>();
+	TArray<FPuzzleGroup> _puzzleGroupArray = TArray<FPuzzleGroup>();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Room Controller|Puzzle")
 	TObjectPtr<APresenceTrigger> _roomClearDoor = nullptr;
@@ -82,51 +85,55 @@ public:
 	// 네트워크 복제 설정
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+#pragma region Change Trigger State
 public:
+	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
+
 	// 클라이언트에서 서버로 트리거 상태 변경 요청
 	UFUNCTION(Server, Reliable)
 	void Server_ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
-	
-	void ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered);
+#pragma endregion Change Trigger State
 
-	void OnActionDeactivated(int32 PuzzleKey);
+#pragma region Change Action State
+	void ChangePuzzleActionState(int32 PuzzleIndex, bool IsActivate);
+
+	// 클라이언트에서 서버로 액션 상태 변경 요청
+	UFUNCTION(Server, Reliable)
+	void Server_ChangePuzzleActionState(int32 PuzzleIndex, bool IsActivate);
+
+	// 액션 활성화 상태가 변경되었을 때 호출되는 함수
+	UFUNCTION()
+	void OnRep_ActivePuzzleIndices();
+
+	// 퍼즐 액션 상태를 적용하는 공통 함수
+	void ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActivate);
+#pragma endregion Change Action State
 
 private:
 	void InitializeRoomController();
 
-	// 클라이언트에서 서버로 액션 상태 변경 요청
-	UFUNCTION(Server, Reliable)
-	void Server_ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive);
-	
-	void ChangePuzzleActionState(int32 PuzzleIndex, bool IsActive);
-	
-	// 액션 활성화 상태가 변경되었을 때 호출되는 함수
-	UFUNCTION()
-	void OnRep_ActivePuzzleIndices();
-	
-	// 퍼즐 액션 상태를 적용하는 공통 함수
-	void ApplyPuzzleActionState(int32 PuzzleIndex, bool IsActive);
+	bool TryGetPuzzleGroup(int32 PuzzleKey, FPuzzleGroup*& OutPuzzleGroup, int32& OutPuzzleIndex, int32& OutRawIndex);
 
-	bool TryGetPuzzleData(int32 PuzzleKey, FPuzzleData*& OutPuzzleData, int32& OutPuzzleIndex, int32& OutRawIndex);
+	//void OnActionDeactivated(int32 PuzzleKey);
 
-	bool CheckAllTimerTriggerValue(FPuzzleData* PuzzleDataPtr, bool hopeResult);
+	//bool CheckAllTimerTriggerValue(FPuzzleData* PuzzleDataPtr, bool hopeResult);
 
-	// 트리거 타이머 관련 서버 RPC 함수
-	UFUNCTION(Server, Reliable)
-	void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
-	
-	void SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
-	
-	UFUNCTION(Server, Reliable)
-	void Server_ClearTriggerTimer(int32 PuzzleIndex);
-	
-	void ClearTriggerTimer(int32 PuzzleIndex);
-	
-	// 타이머 시간 초과 콜백
-	void OnPuzzleTriggerTimeOut(FPuzzleData* PuzzleDataPtr);
+	//// 트리거 타이머 관련 서버 RPC 함수
+	//UFUNCTION(Server, Reliable)
+	//void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
+	//
+	//void SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
+	//
+	//UFUNCTION(Server, Reliable)
+	//void Server_ClearTriggerTimer(int32 PuzzleIndex);
+	//
+	//void ClearTriggerTimer(int32 PuzzleIndex);
+	//
+	//// 타이머 시간 초과 콜백
+	//void OnPuzzleTriggerTimeOut(FPuzzleData* PuzzleDataPtr);
 
-	// 타이머 핸들 초기화
-	void ClearTriggerTimerHandle(FPuzzleData* PuzzleDataPtr);
+	//// 타이머 핸들 초기화
+	//void ClearTriggerTimerHandle(FPuzzleData* PuzzleDataPtr);
 
 	//bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 };
