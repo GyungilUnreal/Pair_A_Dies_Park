@@ -12,6 +12,7 @@ AInteractionTrigger::AInteractionTrigger()
 
 void AInteractionTrigger::InteractTrigger()
 {
+    //UE_LOG(LogTemp, Warning, TEXT("Interacted [%s]"), *GetName());
     if (_isTriggered)
     {
         OnTriggerExit();

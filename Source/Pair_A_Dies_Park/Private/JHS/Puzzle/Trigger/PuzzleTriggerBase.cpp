@@ -42,32 +42,66 @@ void APuzzleTriggerBase::OnTriggerExit()
 	ChangeTriggered(false);
 }
 
-void APuzzleTriggerBase::OnRep_IsTriggered()
+void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey)
 {
-	// 클라이언트에서 실행 - 복제된 상태에 따라 트리거 효과 적용
-	OnChangeIsTrigger(_isTriggered);
-		
-	// 클라이언트에서 직접 효과 적용 (추가 안전장치)
-	if (IsNetMode(NM_Client))
+	_roomController = RoomController;
+	_puzzleKey = PuzzleKey;
+	_isTriggered = false;
+	ChangeTriggered(false);
+	//ResetTrigger();
+}
+
+void APuzzleTriggerBase::OnChangeAction(bool IsActionActivate)
+{
+	UE_LOG(LogTemp, Warning, TEXT("On change action"));
+	if (IsActionActivate)
 	{
-		if (_isTriggered)
-			TriggerEnterEffect();
-		else
-			TriggerExitEffect();
+		if (_isDeactiveOnTrigger)
+		{
+			ChangeTriggerVisibility(false);
+		}
+	}
+	else
+	{
+
 	}
 }
 
-void APuzzleTriggerBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//void APuzzleTriggerBase::Multicast_ResetTrigger_Implementation()
+//{
+//	// 모든 클라이언트에서 실행
+//	bool _wasTriggered = _isTriggered;
+//	_isTriggered = false;
+//	ChangeTriggerVisibility(true);
+//	
+//	// 서버나 리슨 서버에서는 OnRep_IsTriggered가 호출되지 않으므로 직접 효과 적용
+//	// 일반 클라이언트에서는 _isTriggered 변경으로 OnRep_IsTriggered가 자동 호출됨
+//	if (HasAuthority() && _wasTriggered)
+//	{
+//		ChangeTriggered(false);
+//	}
+//}
+//
+//void APuzzleTriggerBase::ResetTrigger()
+//{
+//	// 서버에서만 실행
+//	if (HasAuthority())
+//	{
+//		// 모든 클라이언트에 멀티캐스트 호출
+//		Multicast_ResetTrigger();
+//	}
+//}
 
-	// 복제할 속성 등록 (모든 클라이언트에 복제)
-	DOREPLIFETIME(APuzzleTriggerBase, _isTriggered);
+void APuzzleTriggerBase::Server_ChangeTriggered_Implementation(bool IsTriggered)
+{
+	ChangeTriggered(IsTriggered);
 }
 
-void APuzzleTriggerBase::OnChangeIsTrigger(bool IsTriggered)
+void APuzzleTriggerBase::Multicast_ChangeTriggered_Implementation(bool IsTriggered)
 {
-	if (IsTriggered)
+	_isTriggered = IsTriggered;
+
+	if (_isTriggered)
 	{
 		if (_isChangeImmediately)
 		{
@@ -82,70 +116,38 @@ void APuzzleTriggerBase::OnChangeIsTrigger(bool IsTriggered)
 	}
 }
 
-void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey)
+void APuzzleTriggerBase::ChangeTriggered(bool IsTriggered)
 {
-	_roomController = RoomController;
-	_puzzleKey = PuzzleKey;
-	ResetTrigger();
-}
-
-void APuzzleTriggerBase::Multicast_ResetTrigger_Implementation()
-{
-	// 모든 클라이언트에서 실행
-	bool _wasTriggered = _isTriggered;
-	_isTriggered = false;
-	ChangeTriggerVisibility(true);
-	
-	// 서버나 리슨 서버에서는 OnRep_IsTriggered가 호출되지 않으므로 직접 효과 적용
-	// 일반 클라이언트에서는 _isTriggered 변경으로 OnRep_IsTriggered가 자동 호출됨
-	if (HasAuthority() && _wasTriggered)
+	// 클라이언트에서 호출된 경우 서버에 요청
+	if (!HasAuthority())
 	{
-		OnChangeIsTrigger(false);
+		Server_ChangeTriggered(IsTriggered);
+		return;
 	}
-}
 
-void APuzzleTriggerBase::ResetTrigger()
-{
-	// 서버에서만 실행
-	if (HasAuthority())
+	// 서버에서 상태를 먼저 업데이트 (RoomController에서 IsTriggered() 호출 시 올바른 값 반환)
+	_isTriggered = IsTriggered;
+
+	// 서버에서만 RoomController에 상태 변경 알림
+	if (_roomController == nullptr)
 	{
-		// 모든 클라이언트에 멀티캐스트 호출
-		Multicast_ResetTrigger();
+		UE_LOG(LogTemp, Error, TEXT("ChangeTriggered: _roomController is nullptr"));
+		return;
 	}
+	_roomController->ChangePuzzleTriggerState(_puzzleKey, IsTriggered);
+
+	// 멀티캐스트로 모든 클라이언트에 상태 변경 전파
+	Multicast_ChangeTriggered(IsTriggered);
 }
 
 void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)
 {
+	FString _a = IsVisible ? TEXT("Visible") : TEXT("Invisible");
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *_a);
 	if (!IsVisible && !_isDeactiveOnTrigger)
 		return;
 
 	SetActorHiddenInGame(!IsVisible);
 	SetActorEnableCollision(IsVisible);
 	SetActorTickEnabled(IsVisible);
-}
-
-void APuzzleTriggerBase::ChangeTriggered(bool IsTriggered)
-{
-	// 서버에서만 상태 변경 (복제를 통해 클라이언트에 전파)
-	if (!HasAuthority())
-		return;
-	
-	// 이미 같은 상태면 중복 호출 방지
-	if (_isTriggered == IsTriggered)
-		return;
-		
-	// 상태 변경
-	_isTriggered = IsTriggered;
-		
-	// RoomController에 상태 변경 알림
-	if (_roomController == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("ChangeTriggered: _roomController is nullptr"));
-		return;
-	}
-
-	_roomController->ChangePuzzleTriggerState(_puzzleKey, _isTriggered);
-	
-	// 서버에서 직접 효과 적용
-	OnChangeIsTrigger(_isTriggered);
 }
