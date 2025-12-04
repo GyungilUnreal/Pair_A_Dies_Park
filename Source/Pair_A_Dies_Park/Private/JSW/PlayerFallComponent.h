@@ -86,6 +86,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Fall|UI")
 	FOnClimbGaugeChanged OnClimbGaugeChanged;
 
+	UFUNCTION(BlueprintPure, Category = "Fall|UI")
+	float GetRemainingHangTime() const;
+
 protected:
 	UPROPERTY()
 	class AFloorManager* FloorManager;

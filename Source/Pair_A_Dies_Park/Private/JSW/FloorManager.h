@@ -7,6 +7,7 @@
 #include "FloorManager.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeamLifeChanged, int32, NewLife);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFallCountChanged, int32, NewCount);
 
 USTRUCT(BlueprintType)
 struct FTileData
@@ -92,8 +93,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
 	void ModifyTeamLife(int32 Amount);
 
+	// 점프맵용 낙하 증가 함수
+	UFUNCTION(BlueprintCallable, Category = "Floor Manager")
+	void IncrementFallCount();
+
+	// 점프맵 용 낙하 카운트.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 FallCount = 0;
+
 	// UI 바인딩용 함수.
-	UPROPERTY(BlueprintAssignable, Category = "Floor Manager")
+	UPROPERTY(BlueprintAssignable, Category = "UI")
 	FOnTeamLifeChanged OnTeamLifeChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "UI")
+	FOnFallCountChanged OnFallCountChanged;
 };

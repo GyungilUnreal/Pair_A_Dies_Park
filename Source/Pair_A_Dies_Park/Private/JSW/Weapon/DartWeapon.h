@@ -12,7 +12,9 @@ class ADartWeapon : public ABaseWeapon
 	GENERATED_BODY()
 
 public:
-	virtual void Fire() override;
+	ADartWeapon();
+
+	virtual void StartFire() override;
 
 protected:
 	UFUNCTION(Server,Reliable)

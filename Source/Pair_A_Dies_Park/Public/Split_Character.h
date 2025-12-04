@@ -114,7 +114,8 @@ protected:
 	UInputAction* AimAction;
 
 	// 공격 핸들러
-	void Input_Attack();
+	void Input_Attack_Start();
+	void Input_Attack_End();
 	// 핸들러 함수
 	void Input_Aim_Start(); // 누름
 	void Input_Aim_Stop();  // 뗌

@@ -52,18 +52,23 @@ void AFloorManager::BeginPlay()
 		FVector LocA = A.GetActorLocation();
 		FVector LocB = B.GetActorLocation();
 
-		// 1순위 Z축 
 		if (FMath::Abs(LocA.Z - LocB.Z) > 1000.0f)
 		{
-			return LocA.Z < LocB.Z; // 1층이 먼저
+			return LocA.Z < LocB.Z;
 		}
-		// 2순위 X축
-		if (FMath::Abs(LocA.X - LocB.X) > 10.0f)
+
+		int32 GridXA = FMath::RoundToInt(LocA.X / TileSize);
+		int32 GridXB = FMath::RoundToInt(LocB.X / TileSize);
+
+		if (GridXA != GridXB)
 		{
-			return LocA.X < LocB.X;
+			return GridXA < GridXB;
 		}
-		// 3순위 Y축
-		return LocA.Y < LocB.Y;
+
+		int32 GridYA = FMath::RoundToInt(LocA.Y / TileSize);
+		int32 GridYB = FMath::RoundToInt(LocB.Y / TileSize);
+
+		return GridYA < GridYB;
 	});
 
 	GridData.SetNum(FoundCubes.Num());
@@ -226,7 +231,7 @@ FVector AFloorManager::GetRandomSafeFloorLocation()
 
 	for (const FTileData& Tile : GridData)
 	{
-		if (Tile.VisualActor && Tile.HP > 0)
+		if (Tile.VisualActor && Tile.HP > 0 && Tile.HP < 10)
 		{
 			if (FMath::IsNearlyEqual(Tile.VisualActor->GetActorLocation().Z, Floor1_Height, 500.0f))
 			{
@@ -262,4 +267,11 @@ void AFloorManager::ModifyTeamLife(int32 Amount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GAME OVERRRRR"));
 	}
+}
+
+void AFloorManager::IncrementFallCount()
+{
+	FallCount++;
+	OnFallCountChanged.Broadcast(FallCount);
+	UE_LOG(LogTemp, Log, TEXT("Fall Count Increased: %d"), FallCount);
 }

@@ -103,6 +103,17 @@ void UPlayerFallComponent::Input_MashF()
 	}
 }
 
+float UPlayerFallComponent::GetRemainingHangTime() const
+{
+	if (CurrentState != EFallState::Hanging) return 0.0f;
+
+	if (GetWorld())
+	{
+		return GetWorld()->GetTimerManager().GetTimerRemaining(HangTimerHandle);
+	}
+	return 0.0f;
+}
+
 void UPlayerFallComponent::LetGo()
 {
 	if (CurrentState != EFallState::Hanging) return;
