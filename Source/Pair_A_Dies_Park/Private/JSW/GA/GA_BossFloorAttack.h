@@ -24,7 +24,13 @@ protected:
 		const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData) override;
 
+	int32 CachedTargetLayer;
+	FIntPoint CachedTargetCoord;
+
 	UFUNCTION()
 	void OnMontageCompleted();
+
+	UFUNCTION()
+	void OnSmashEventReceived(FGameplayEventData Payload);
 
 };

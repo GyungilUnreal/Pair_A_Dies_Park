@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "JSW/Weapon/BaseWeapon.h"
+#include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 #include "Components/ArrowComponent.h"
 #include "Split_Character.h"
@@ -22,16 +22,29 @@ ABaseWeapon::ABaseWeapon()
 	MuzzleLocation->SetupAttachment(BaseMesh);
 }
 
+void ABaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABaseWeapon, CurrentAmmo);
+}
+
 void ABaseWeapon::GazeInteract_Implementation(AActor* InstigatorActor)
 {
 	ASplit_Character* Player = Cast<ASplit_Character>(InstigatorActor);
 	if (Player)
 	{
 		Player->EquipWeapon(this);
-
 		Multicast_OnEquip();
+		if (HasAuthority())
+		{
+			if (!bInfiniteAmmo) CurrentAmmo = MaxAmmo;
+			OnRep_CurrentAmmo();
+		}
 	}
 }
+
+void ABaseWeapon::StartFire() {}
+void ABaseWeapon::StopFire() {}
 
 void ABaseWeapon::Multicast_OnEquip_Implementation()
 {
@@ -60,4 +73,22 @@ void ABaseWeapon::Multicast_OnEquip_Implementation()
 	{
 		TextComp->DestroyComponent();
 	}
+}
+
+void ABaseWeapon::OnRep_CurrentAmmo()
+{
+	OnAmmoChanged.Broadcast(CurrentAmmo, MaxAmmo);
+}
+
+bool ABaseWeapon::ConsumeAmmo()
+{
+	if (bInfiniteAmmo) return true;
+
+	if (CurrentAmmo > 0)
+	{
+		CurrentAmmo--;
+		OnRep_CurrentAmmo();
+		return true;
+	}
+	return false;
 }

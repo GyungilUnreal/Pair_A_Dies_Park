@@ -74,10 +74,15 @@ void ABubbleProjectile::BeginPlay()
 		if (IsValid(this) && CollisionComp && !bIsIce)
 		{
 			CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			CollisionComp->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+			CollisionComp->SetCollisionObjectType(ECC_WorldDynamic);
 
-			CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+			CollisionComp->SetCollisionResponseToAllChannels(ECR_Block);
+			CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 			CollisionComp->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+
+			CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+
+			CollisionComp->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 		}
 
 	}, 2.0f, false);
@@ -104,6 +109,7 @@ float ABubbleProjectile::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 		ProjectileMovement->Deactivate();
 
 		CollisionComp->SetSimulatePhysics(true);
+		CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
 		CollisionComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 		CollisionComp->AddImpulse(FVector(0, 0, -1000.0f), NAME_None, true);
 	}

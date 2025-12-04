@@ -66,7 +66,6 @@ void UPlayerFallComponent::ApplyStateLogic()
 			Movement->StopMovementImmediately();
 			Movement->SetMovementMode(MOVE_Flying);
 		}
-		OwnerCharacter->SetActorEnableCollision(false);
 
 		float Duration = 1.5f;
 		if (ClimbUpMontage) Duration = OwnerCharacter->PlayAnimMontage(ClimbUpMontage);
@@ -95,8 +94,16 @@ void UPlayerFallComponent::RespawnAtFloor1()
 
 	if (FloorManager)
 	{
-		RespawnLoc = FloorManager->GetRandomSafeFloorLocation();
-		FloorManager->ModifyTeamLife(1); // 목숨 깎기
+		if (MinKillZThreshold > 0.0f)
+		{
+			RespawnLoc = FloorManager->GetRandomSafeFloorLocation();
+			FloorManager->ModifyTeamLife(1);
+		}
+		else
+		{
+			RespawnLoc = InitialSpawnLocation;
+			FloorManager->IncrementFallCount();
+		}
 	}
 	else
 	{

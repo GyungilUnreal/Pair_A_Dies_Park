@@ -5,10 +5,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 
-void ADartWeapon::Fire()
+ADartWeapon::ADartWeapon()
 {
-	bReplicates = true;
+	bInfiniteAmmo = true;
+}
 
+void ADartWeapon::StartFire()
+{
 	Server_Fire();
 }
 
@@ -17,7 +20,7 @@ void ADartWeapon::Server_Fire_Implementation()
 	FVector Start = MuzzleLocation->GetComponentLocation();
 	FVector Forward = MuzzleLocation->GetForwardVector();
 
-	float SphereRadius = 30.0f;
+	float SphereRadius = 100.0f;
 
 	FVector TraceStart = Start + (Forward * 40.0f);
 	FVector End = TraceStart + (Forward * MaxRange);
@@ -32,7 +35,7 @@ void ADartWeapon::Server_Fire_Implementation()
 		TraceStart,
 		End,
 		FQuat::Identity,
-		ECC_WorldDynamic,
+		ECC_Visibility,
 		FCollisionShape::MakeSphere(SphereRadius),
 		Params
 	);

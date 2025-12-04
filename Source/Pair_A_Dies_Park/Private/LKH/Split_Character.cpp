@@ -140,7 +140,8 @@ void ASplit_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASplit_Character::Look);
 		// 怨듦꺽
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Attack);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Attack_Start);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Attack_End);
 		// 以뚯씤, 以뚯븘??
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Aim_Start);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Aim_Stop);
@@ -251,12 +252,19 @@ void ASplit_Character::OnRep_PlayerState()
 	AbilitySystemComp->InitAbilityActorInfo(this, this);
 }
 
-void ASplit_Character::Input_Attack()
+void ASplit_Character::Input_Attack_Start()
 {
-	// 臾닿린媛 ?덉쑝硫?臾닿린 諛쒖궗
 	if (EquippedWeapon)
 	{
-		EquippedWeapon->Fire();
+		EquippedWeapon->StartFire();
+	}
+}
+
+void ASplit_Character::Input_Attack_End()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->StopFire();
 	}
 }
 
