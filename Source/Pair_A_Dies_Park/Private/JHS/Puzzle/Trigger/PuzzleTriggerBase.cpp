@@ -48,72 +48,6 @@ void APuzzleTriggerBase::InitializePuzzleTrigger(TObjectPtr<ARoomController> Roo
 	_puzzleKey = PuzzleKey;
 	_isTriggered = false;
 	ChangeTriggered(false);
-	//ResetTrigger();
-}
-
-void APuzzleTriggerBase::OnChangeAction(bool IsActionActivate)
-{
-	UE_LOG(LogTemp, Warning, TEXT("On change action"));
-	if (IsActionActivate)
-	{
-		if (_isDeactiveOnTrigger)
-		{
-			ChangeTriggerVisibility(false);
-		}
-	}
-	else
-	{
-
-	}
-}
-
-//void APuzzleTriggerBase::Multicast_ResetTrigger_Implementation()
-//{
-//	// 모든 클라이언트에서 실행
-//	bool _wasTriggered = _isTriggered;
-//	_isTriggered = false;
-//	ChangeTriggerVisibility(true);
-//	
-//	// 서버나 리슨 서버에서는 OnRep_IsTriggered가 호출되지 않으므로 직접 효과 적용
-//	// 일반 클라이언트에서는 _isTriggered 변경으로 OnRep_IsTriggered가 자동 호출됨
-//	if (HasAuthority() && _wasTriggered)
-//	{
-//		ChangeTriggered(false);
-//	}
-//}
-//
-//void APuzzleTriggerBase::ResetTrigger()
-//{
-//	// 서버에서만 실행
-//	if (HasAuthority())
-//	{
-//		// 모든 클라이언트에 멀티캐스트 호출
-//		Multicast_ResetTrigger();
-//	}
-//}
-
-void APuzzleTriggerBase::Server_ChangeTriggered_Implementation(bool IsTriggered)
-{
-	ChangeTriggered(IsTriggered);
-}
-
-void APuzzleTriggerBase::Multicast_ChangeTriggered_Implementation(bool IsTriggered)
-{
-	_isTriggered = IsTriggered;
-
-	if (_isTriggered)
-	{
-		if (_isChangeImmediately)
-		{
-			ChangeTriggerVisibility(false);
-		}
-
-		TriggerEnterEffect();
-	}
-	else
-	{
-		TriggerExitEffect();
-	}
 }
 
 void APuzzleTriggerBase::ChangeTriggered(bool IsTriggered)
@@ -140,10 +74,52 @@ void APuzzleTriggerBase::ChangeTriggered(bool IsTriggered)
 	Multicast_ChangeTriggered(IsTriggered);
 }
 
+void APuzzleTriggerBase::Server_ChangeTriggered_Implementation(bool IsTriggered)
+{
+	ChangeTriggered(IsTriggered);
+}
+
+void APuzzleTriggerBase::Multicast_ChangeTriggered_Implementation(bool IsTriggered)
+{
+	_isTriggered = IsTriggered;
+
+	if (_isTriggered)
+	{
+		if (_isChangeImmediately)
+		{
+			ChangeTriggerVisibility(false);
+		}
+
+		TriggerEnterEffect();
+	}
+	else
+	{
+		TriggerExitEffect();
+	}
+}
+
+void APuzzleTriggerBase::OnChangeAction(bool IsActionActivate)
+{
+	if (IsActionActivate)
+	{
+		if (_isDeactiveOnTrigger)
+		{
+			ChangeTriggerVisibility(false);
+		}
+	}
+	else
+	{
+
+	}
+}
+
+void APuzzleTriggerBase::ResetTrigger()
+{
+	ChangeTriggered(false);
+}
+
 void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)
 {
-	FString _a = IsVisible ? TEXT("Visible") : TEXT("Invisible");
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *_a);
 	if (!IsVisible && !_isDeactiveOnTrigger)
 		return;
 

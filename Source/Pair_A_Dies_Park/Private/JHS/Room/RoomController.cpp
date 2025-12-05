@@ -46,7 +46,7 @@ void ARoomController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	// 복제할 속성 등록
 	DOREPLIFETIME(ARoomController, _roomData);
 	DOREPLIFETIME(ARoomController, _roomType);
-	DOREPLIFETIME(ARoomController, _puzzleGroupArray);
+	DOREPLIFETIME(ARoomController, _puzzleCategoryArray);
 	DOREPLIFETIME(ARoomController, _roomClearDoor);
 	DOREPLIFETIME(ARoomController, _activePuzzleIndices);
 }
@@ -82,16 +82,31 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 		return;
 
 	// 트리거 타이머 처리 (서버 RPC 함수 호출)
-	/*if (IsTriggered && _puzzleDataPtr->PuzzleTriggerArray[_triggerIndex]->IsTimerTrigger())
+	/*if (IsTriggered && _puzzleGroupPtr->PuzzleTriggerArray[_triggerIndex]->IsTimerTrigger())
 	{
 		SetTriggerTimer(_puzzleIndex, _triggerIndex);
 	}*/
 
 	// 모든 트리거가 활성화되었는지 확인
 	bool _isActivate = true;
-	for (int32 i = 0; i < _puzzleGroupPtr->PuzzleTriggerArray.Num(); i++)
+	int32 _triggerNum = _puzzleGroupPtr->PuzzleTriggerArray.Num();
+	int32 _nullptrTriggerCount = 0;
+	for (int32 i = 0; i < _triggerNum; i++)
 	{
 		TObjectPtr<APuzzleTriggerBase> _trigger = _puzzleGroupPtr->PuzzleTriggerArray[i];
+		if (_trigger == nullptr)
+		{
+			_nullptrTriggerCount++;
+			continue;
+		}
+
+		// 모든 트리거 공백
+		if (_nullptrTriggerCount == _triggerNum)
+		{
+			_isActivate = false;
+			break;
+		}
+
 		if (!_trigger->IsTriggered())
 		{
 			_isActivate = false;
@@ -233,41 +248,53 @@ void ARoomController::InitializeRoomController()
 		_roomClearDoor->InitializePuzzleTrigger(this, ROOM_CLEAR_DOOR_KEY);
 	}
 
-	if (_puzzleGroupArray.Num() <= 0)
+	if (_puzzleCategoryArray.Num() <= 0)
 		return;
 
-	// 퍼즐 데이터 초기화
-	for (int32 i = 0; i < _puzzleGroupArray.Num(); i++)
+	// _puzzleGroupArray 초기화
+	_puzzleGroupArray.Empty();
+
+	// 카테고리 배열을 기반으로 퍼즐 그룹 배열 생성
+	for (const FPuzzleCategory& _puzzleCategory : _puzzleCategoryArray)
 	{
-		FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[i];
-		_puzzleGroupPtr->IsPuzzleActivated = false;
-		_puzzleGroupPtr->TimerTriggerMap.Empty();
-
-		// 퍼즐 트리거 초기화
-		for (int32 j = 0; j < _puzzleGroupPtr->PuzzleTriggerArray.Num(); j++)
+		// 각 카테고리의 PuzzleInfoArray 순회
+		for (const FPuzzleInfo& _puzzleInfo : _puzzleCategory.PuzzleInfoArray)
 		{
-			int32 _puzzleKey = i * PUZZLE_DATA_RATE + j;
-			TObjectPtr<APuzzleTriggerBase> _trigger = _puzzleGroupPtr->PuzzleTriggerArray[j];
-			if (_trigger == nullptr)
-				continue;
+			// 퍼즐 그룹 복사
+			FPuzzleGroup _newPuzzleGroup = _puzzleInfo.PuzzleGroup;
+			_newPuzzleGroup.IsPuzzleActivated = false;
+			_newPuzzleGroup.TimerTriggerMap.Empty();
 
-			_trigger->InitializePuzzleTrigger(this, _puzzleKey);
+			int32 _puzzleGroupIndex = _puzzleGroupArray.Num();
+			_puzzleGroupArray.Add(_newPuzzleGroup);
 
-			if (_trigger->IsTimerTrigger())
+			// 퍼즐 그룹 포인터 가져오기
+			FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[_puzzleGroupIndex];
+
+			// 퍼즐 트리거 초기화
+			for (int32 j = 0; j < _puzzleGroupPtr->PuzzleTriggerArray.Num(); j++)
 			{
-				_puzzleGroupPtr->TimerTriggerMap.Add(j, false);
+				int32 _puzzleKey = _puzzleGroupIndex * PUZZLE_DATA_RATE + j;
+				TObjectPtr<APuzzleTriggerBase> _trigger = _puzzleGroupPtr->PuzzleTriggerArray[j];
+				if (_trigger == nullptr)
+					continue;
+
+				_trigger->InitializePuzzleTrigger(this, _puzzleKey);
+
+				if (_trigger->IsTimerTrigger())
+				{
+					_puzzleGroupPtr->TimerTriggerMap.Add(j, false);
+				}
 			}
-		}
 
-		//ClearTriggerTimerHandle(_puzzleDataPtr);
+			// 퍼즐 액션 초기화
+			for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleGroupPtr->PuzzleActionArray)
+			{
+				if (_puzzleAction == nullptr)
+					continue;
 
-		// 퍼즐 액션 초기화
-		for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleGroupPtr->PuzzleActionArray)
-		{
-			if (_puzzleAction == nullptr)
-				continue;
-
-			_puzzleAction->InitializePuzzleAction();
+				_puzzleAction->InitializePuzzleAction();
+			}
 		}
 	}
 }
@@ -286,6 +313,44 @@ bool ARoomController::TryGetPuzzleGroup(int32 PuzzleKey, FPuzzleGroup*& OutPuzzl
 	OutPuzzleGroup = &_puzzleGroupArray[OutPuzzleIndex];
 	return true;
 }
+
+#pragma region Timer trigger
+//void ARoomController::SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex)
+//{
+//	// 서버에서만 실행되도록 체크
+//	if (!HasAuthority())
+//	{
+//		Server_SetTriggerTimer(PuzzleIndex, TriggerIndex);
+//		return;
+//	}
+//	
+//	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleGroupArray.Num())
+//		return;
+//	
+//	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
+//	if (!_puzzleGroupPtr->TimerTriggerMap.Contains(TriggerIndex))
+//		return;
+//	
+//	// 모든 타이머 트리거가 false인지 확인
+//	if (CheckAllTimerTriggerValue(_puzzleGroupPtr, false))
+//	{
+//		_puzzleGroupPtr->TimerTriggerMap[TriggerIndex] = true;
+//	}
+//	
+//	// 타이머 설정
+//	GetWorld()->GetTimerManager().SetTimer(
+//		_puzzleGroupPtr->TriggerTimerHandle, 
+//		FTimerDelegate::CreateUObject(this, &ARoomController::OnPuzzleTriggerTimeOut, _puzzleGroupPtr), 
+//		_puzzleGroupPtr->TimerLimit, 
+//		false
+//	);
+//}
+
+//void ARoomController::Server_SetTriggerTimer_Implementation(int32 PuzzleIndex, int32 TriggerIndex)
+//{
+//	SetTriggerTimer(PuzzleIndex, TriggerIndex);
+//}
+#pragma endregion Timer trigger
 
 //void ARoomController::OnActionDeactivated(int32 PuzzleIndex)
 //{
@@ -334,43 +399,7 @@ bool ARoomController::TryGetPuzzleGroup(int32 PuzzleKey, FPuzzleGroup*& OutPuzzl
 //	return true;
 //}
 //
-//void ARoomController::Server_SetTriggerTimer_Implementation(int32 PuzzleIndex, int32 TriggerIndex)
-//{
-//	SetTriggerTimer(PuzzleIndex, TriggerIndex);
-//}
-//
-//void ARoomController::SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex)
-//{
-//	// 서버에서만 실행되도록 체크
-//	if (!HasAuthority())
-//	{
-//		Server_SetTriggerTimer(PuzzleIndex, TriggerIndex);
-//		return;
-//	}
-//	
-//	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
-//		return;
-//	
-//	FPuzzleGroup* _puzzleDataPtr = &_puzzleDataArray[PuzzleIndex];
-//	
-//	// 타이머 트리거 맵에 해당 트리거 인덱스가 없으면 리턴
-//	if (!_puzzleDataPtr->TimerTriggerMap.Contains(TriggerIndex))
-//		return;
-//	
-//	// 모든 타이머 트리거가 false인지 확인
-//	if (CheckAllTimerTriggerValue(_puzzleDataPtr, false))
-//	{
-//		_puzzleDataPtr->TimerTriggerMap[TriggerIndex] = true;
-//	}
-//	
-//	// 타이머 설정
-//	GetWorld()->GetTimerManager().SetTimer(
-//		_puzzleDataPtr->TriggerTimerHandle, 
-//		FTimerDelegate::CreateUObject(this, &ARoomController::OnPuzzleTriggerTimeOut, _puzzleDataPtr), 
-//		_puzzleDataPtr->TimerLimit, 
-//		false
-//	);
-//}
+
 //
 //void ARoomController::Server_ClearTriggerTimer_Implementation(int32 PuzzleIndex)
 //{
