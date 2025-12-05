@@ -12,6 +12,44 @@ AFloorManager::AFloorManager()
 	bReplicates = true;
 }
 
+void SetActorActive(AActor* TargetActor, bool bActive)
+{
+	if (!TargetActor) return;
+
+	TargetActor->SetActorHiddenInGame(!bActive);
+	TargetActor->SetActorEnableCollision(bActive);
+	TargetActor->SetActorTickEnabled(bActive);
+}
+
+void AFloorManager::ActivateClearItem()
+{
+	if (!HasAuthority()) return;
+
+	int32 CenterLayer = 0;
+	for (int32 x = 3; x <= 5; ++x)
+	{
+		for (int32 y = 3; y <= 5; ++y)
+		{
+			int32 Index = (CenterLayer * TilesPerLayer) + (x * GridWidth) + y;
+			if (GridData.IsValidIndex(Index))
+			{
+				GridData[Index].HP = 2;
+			}
+		}
+	}
+	UpdateVisualsFromState();
+
+	if (ClearRewardItem)
+	{
+		SetActorActive(ClearRewardItem, true);
+		UE_LOG(LogTemp, Warning, TEXT(">>> BOSS CLEARED! Reward Item Activated! <<<"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT(">>> ClearRewardItem is NULL! Please assign it in the Level Editor! <<<"));
+	}
+}
+
 void AFloorManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -22,6 +60,15 @@ void AFloorManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 void AFloorManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		if (ClearRewardItem)
+		{
+			SetActorActive(ClearRewardItem, false);
+			UE_LOG(LogTemp, Log, TEXT("ClearRewardItem Hidden by FloorManager BeginPlay"));
+		}
+	}
 
 	TArray<AActor*> FoundCubes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorTile::StaticClass(), FoundCubes);
@@ -86,6 +133,7 @@ void AFloorManager::BeginPlay()
 				if (Tile->bIsBossPlatform)
 				{
 					GridData[i].HP = 255;
+					
 				}
 			}
 		}
@@ -110,12 +158,18 @@ void AFloorManager::UpdateVisualsFromState()
 	{
 		if (Tile.VisualActor)
 		{
-			bool bVisible = (Tile.HP > 0);
+			if (Tile.HP == 0 || Tile.HP == 255)
+			{
+				Tile.VisualActor->SetActorHiddenInGame(true);
+				Tile.VisualActor->SetActorEnableCollision(false);
+			}
+			else
+			{
+				Tile.VisualActor->SetActorHiddenInGame(false);
+				Tile.VisualActor->SetActorEnableCollision(true);
+			}
 
-			Tile.VisualActor->SetActorHiddenInGame(!bVisible);
-			Tile.VisualActor->SetActorEnableCollision(bVisible);
-
-			// TODO: 나중에 HP가 1일 때 '금 간 머티리얼'로 변경하는 로직 추가
+			// TODO: 나중에 HP가 1일 때 '금 간 머티리얼'로 변경하는 로직은 여기(else)에 추가
 		}
 	}
 }

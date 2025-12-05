@@ -65,7 +65,20 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-			
+
+	// 공격 핸들러
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Input_Attack_Start();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Input_Attack_End();
+
+	// 핸들러 함수
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Input_Aim_Start(); // 누름
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Input_Aim_Stop();  // 뗌
 
 protected:
 	// APawn interface
@@ -112,13 +125,6 @@ protected:
 	// 조준 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AimAction;
-
-	// 공격 핸들러
-	void Input_Attack_Start();
-	void Input_Attack_End();
-	// 핸들러 함수
-	void Input_Aim_Start(); // 누름
-	void Input_Aim_Stop();  // 뗌
 
 	// 줌 관련 설정
 	float DefaultFOV = 90.0f; // 평소 시야각

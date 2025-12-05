@@ -39,6 +39,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Replicated, Category = "Boss|Health")
 	float MaxHealth = 100.f;
 
+	UPROPERTY(EditAnywhere, Category = "Boss|ClearBP")
+	TSubclassOf<AActor> ClearItemBPClass;
+
 	// 체력이 변경될 때 클라에서 호출.
 	UFUNCTION()
 	void OnRep_CurrentHealth();

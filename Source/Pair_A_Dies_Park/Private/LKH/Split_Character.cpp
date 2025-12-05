@@ -139,12 +139,6 @@ void ASplit_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASplit_Character::Look);
-		// 怨듦꺽
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Attack_Start);
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Attack_End);
-		// 以뚯씤, 以뚯븘??
-		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ASplit_Character::Input_Aim_Start);
-		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ASplit_Character::Input_Aim_Stop);
 	}
 }
 

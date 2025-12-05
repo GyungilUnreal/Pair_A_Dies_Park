@@ -36,6 +36,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")
 	float Floor2_Height = 49550.0f;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss")
+	void ActivateClearItem();
+
 protected:
 	// 9X9의 그리드 상태를 저장하는 1차원 배열 (true=파괴됨, false=존재)
 	UPROPERTY(ReplicatedUsing = OnRep_GridData)
@@ -47,6 +50,9 @@ protected:
 
 	UPROPERTY()
 	TArray<FVector> InitialSpawnLocations;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Boss")
+	TObjectPtr<AActor> ClearRewardItem;
 
 	// 타일 사이즈
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Floor Grid")

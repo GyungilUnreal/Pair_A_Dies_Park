@@ -8,6 +8,8 @@
 #include "Net/UnrealNetwork.h"
 #include "BrainComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "JSW/FloorManager.h"
+#include "Kismet/GameplayStatics.h"
 
 ABossCharacter::ABossCharacter()
 {
@@ -96,6 +98,15 @@ void ABossCharacter::Server_TakePuzzleDamage_Implementation(float DamageAmount)
 
         // 몽타주 길이만큼 시간이 지난 후 액터 파괴
         SetLifeSpan(DeathMontage ? DeathMontage->GetPlayLength() : 5.0f);
+
+        AFloorManager* FloorManager = Cast<AFloorManager>(
+            UGameplayStatics::GetActorOfClass(GetWorld(), AFloorManager::StaticClass())
+        );
+
+        if (FloorManager)
+        {
+            FloorManager->ActivateClearItem();
+        }
     }
     // 페이즈 관련 코드. 일단 주석처리.
     //else
