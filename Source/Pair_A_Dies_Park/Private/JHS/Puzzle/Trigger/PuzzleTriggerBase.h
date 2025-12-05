@@ -45,7 +45,7 @@ protected:
 	bool _isTimerTrigger = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
-	bool _isChangeImmediately = false;
+	bool _isHideImmediately = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
 	bool _isDeactiveOnTrigger = false;
@@ -63,6 +63,8 @@ protected:
 
 	virtual void TriggerExitEffect() { }
 
+	virtual void ResetTriggerOverride() { }
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -75,14 +77,11 @@ protected:
 public:
 	void InitializePuzzleTrigger(TObjectPtr<ARoomController> RoomController, int32 PuzzleKey);
 
-	void OnChangeAction(bool IsActionActivate);
+#pragma region Change Triggered
+private:
+	void ChangeTriggered(bool IsTriggered);
 
-	// 트리거 상태를 초기화하는 함수 (서버 RPC)
-	/*UFUNCTION(NetMulticast, Reliable)
-	void Multicast_ResetTrigger();
-	
-	void ResetTrigger();*/
-	
+public:
 	// 트리거 상태를 변경하는 서버 RPC 함수
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeTriggered(bool IsTriggered);
@@ -90,9 +89,19 @@ public:
 	// 트리거 상태를 변경하는 멀티캐스트 함수
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_ChangeTriggered(bool IsTriggered);
+#pragma endregion Change Triggered
+
+public:
+	void OnChangeAction(bool IsActionActivate);
+
+	void ResetTrigger();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ResetTrigger();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ResetTrigger();
 
 private:
-	void ChangeTriggered(bool IsTriggered);
-
 	void ChangeTriggerVisibility(bool IsVisible);
 };
