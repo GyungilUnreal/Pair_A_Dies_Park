@@ -45,7 +45,7 @@ protected:
 	bool _isTimerTrigger = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
-	bool _isChangeImmediately = false;
+	bool _isHideImmediately = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
 	bool _isDeactiveOnTrigger = false;
@@ -62,6 +62,8 @@ protected:
 	virtual void TriggerEnterEffect() { }
 
 	virtual void TriggerExitEffect() { }
+
+	virtual void ResetTriggerOverride() { }
 
 public:	
 	// Called every frame
@@ -93,6 +95,12 @@ public:
 	void OnChangeAction(bool IsActionActivate);
 
 	void ResetTrigger();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ResetTrigger();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ResetTrigger();
 
 private:
 	void ChangeTriggerVisibility(bool IsVisible);

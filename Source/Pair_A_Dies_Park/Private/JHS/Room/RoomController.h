@@ -142,30 +142,21 @@ private:
 
 #pragma region Timer trigger
 private:
-	/*void SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
+	void SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
 
 	UFUNCTION(Server, Reliable)
-	void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);*/
-#pragma endregion Timer trigger
+	void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
 
+	bool CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult);
 
-	//void OnActionDeactivated(int32 PuzzleKey);
+	void OnPuzzleTriggerTimeOut(FPuzzleGroup* PuzzleGroupPtr);
 
-	//bool CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult);
+	void ClearTriggerTimer(int32 PuzzleIndex);
 
-	//// 트리거 타이머 관련 서버 RPC 함수
-	
+	UFUNCTION(Server, Reliable)
+	void Server_ClearTriggerTimer(int32 PuzzleIndex);
 
-	//UFUNCTION(Server, Reliable)
-	//void Server_ClearTriggerTimer(int32 PuzzleIndex);
-
-	//void ClearTriggerTimer(int32 PuzzleIndex);
-
-	//// 타이머 시간 초과 콜백
-	//void OnPuzzleTriggerTimeOut(FPuzzleData* PuzzleDataPtr);
-
-	//// 타이머 핸들 초기화
-	//void ClearTriggerTimerHandle(FPuzzleData* PuzzleDataPtr);
+	void ClearTriggerTimerHandle(FPuzzleGroup* PuzzleGroupPtr);
 
 	//bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 };

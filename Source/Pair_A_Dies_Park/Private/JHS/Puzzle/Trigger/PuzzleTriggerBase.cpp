@@ -85,7 +85,7 @@ void APuzzleTriggerBase::Multicast_ChangeTriggered_Implementation(bool IsTrigger
 
 	if (_isTriggered)
 	{
-		if (_isChangeImmediately)
+		if (_isHideImmediately && _isDeactiveOnTrigger)
 		{
 			ChangeTriggerVisibility(false);
 		}
@@ -115,7 +115,26 @@ void APuzzleTriggerBase::OnChangeAction(bool IsActionActivate)
 
 void APuzzleTriggerBase::ResetTrigger()
 {
+	// 클라이언트에서 호출된 경우 서버에 요청
+	if (!HasAuthority())
+	{
+		Server_ResetTrigger();
+		return;
+	}
+
+	Multicast_ResetTrigger();
+}
+
+void APuzzleTriggerBase::Server_ResetTrigger_Implementation()
+{
+	ResetTrigger();
+}
+
+void APuzzleTriggerBase::Multicast_ResetTrigger_Implementation()
+{
 	ChangeTriggered(false);
+	ResetTriggerOverride();
+	ChangeTriggerVisibility(true);
 }
 
 void APuzzleTriggerBase::ChangeTriggerVisibility(bool IsVisible)

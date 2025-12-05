@@ -82,10 +82,10 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 		return;
 
 	// 트리거 타이머 처리 (서버 RPC 함수 호출)
-	/*if (IsTriggered && _puzzleGroupPtr->PuzzleTriggerArray[_triggerIndex]->IsTimerTrigger())
+	if (IsTriggered && _puzzleGroupPtr->PuzzleTriggerArray[_triggerIndex]->IsTimerTrigger())
 	{
 		SetTriggerTimer(_puzzleIndex, _triggerIndex);
-	}*/
+	}
 
 	// 모든 트리거가 활성화되었는지 확인
 	bool _isActivate = true;
@@ -114,10 +114,10 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 	}
 
 	// 모든 트리거 만족 시 트리거 타이머 해제 (서버 RPC 함수 호출)
-	/*if (_isActivate && CheckAllTimerTriggerValue(_puzzleDataPtr, true))
+	if (_isActivate && CheckAllTimerTriggerValue(_puzzleGroupPtr, true))
 	{
 		ClearTriggerTimer(_puzzleIndex);
-	}*/
+	}
 
 	ChangePuzzleActionState(_puzzleIndex, _isActivate);
 }
@@ -315,144 +315,109 @@ bool ARoomController::TryGetPuzzleGroup(int32 PuzzleKey, FPuzzleGroup*& OutPuzzl
 }
 
 #pragma region Timer trigger
-//void ARoomController::SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex)
-//{
-//	// 서버에서만 실행되도록 체크
-//	if (!HasAuthority())
-//	{
-//		Server_SetTriggerTimer(PuzzleIndex, TriggerIndex);
-//		return;
-//	}
-//	
-//	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleGroupArray.Num())
-//		return;
-//	
-//	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
-//	if (!_puzzleGroupPtr->TimerTriggerMap.Contains(TriggerIndex))
-//		return;
-//	
-//	// 모든 타이머 트리거가 false인지 확인
-//	if (CheckAllTimerTriggerValue(_puzzleGroupPtr, false))
-//	{
-//		_puzzleGroupPtr->TimerTriggerMap[TriggerIndex] = true;
-//	}
-//	
-//	// 타이머 설정
-//	GetWorld()->GetTimerManager().SetTimer(
-//		_puzzleGroupPtr->TriggerTimerHandle, 
-//		FTimerDelegate::CreateUObject(this, &ARoomController::OnPuzzleTriggerTimeOut, _puzzleGroupPtr), 
-//		_puzzleGroupPtr->TimerLimit, 
-//		false
-//	);
-//}
+void ARoomController::SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex)
+{
+	// 서버에서만 실행되도록 체크
+	if (!HasAuthority())
+	{
+		Server_SetTriggerTimer(PuzzleIndex, TriggerIndex);
+		return;
+	}
+	
+	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleGroupArray.Num())
+		return;
+	
+	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
+	if (!_puzzleGroupPtr->TimerTriggerMap.Contains(TriggerIndex))
+		return;
+	
+	// 모든 타이머 트리거가 false인지 확인
+	if (CheckAllTimerTriggerValue(_puzzleGroupPtr, false))
+	{
+		_puzzleGroupPtr->TimerTriggerMap[TriggerIndex] = true;
+	}
+	
+	// 타이머 설정
+	GetWorld()->GetTimerManager().SetTimer(
+		_puzzleGroupPtr->TriggerTimerHandle, 
+		FTimerDelegate::CreateUObject(this, &ARoomController::OnPuzzleTriggerTimeOut, _puzzleGroupPtr), 
+		_puzzleGroupPtr->TimerLimit, 
+		false
+	);
+}
 
-//void ARoomController::Server_SetTriggerTimer_Implementation(int32 PuzzleIndex, int32 TriggerIndex)
-//{
-//	SetTriggerTimer(PuzzleIndex, TriggerIndex);
-//}
+void ARoomController::Server_SetTriggerTimer_Implementation(int32 PuzzleIndex, int32 TriggerIndex)
+{
+	SetTriggerTimer(PuzzleIndex, TriggerIndex);
+}
+
+bool ARoomController::CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult)
+{
+	if (PuzzleDataPtr->TimerTriggerMap.Num() <= 0)
+		return false;
+
+	for (auto& _pair : PuzzleDataPtr->TimerTriggerMap)
+	{
+		if (_pair.Value != hopeResult)
+			return false;
+	}
+
+	return true;
+}
+
+void ARoomController::OnPuzzleTriggerTimeOut(FPuzzleGroup* PuzzleGroupPtr)
+{
+	// 서버에서만 실행되는지 확인
+	if (!HasAuthority())
+		return;
+		
+	// 타이머 핸들 초기화
+	ClearTriggerTimerHandle(PuzzleGroupPtr);
+	
+	// 모든 타이머 트리거 리셋
+	for (auto& _pair : PuzzleGroupPtr->TimerTriggerMap)
+	{
+		// 트리거가 유효한지 확인
+		if (PuzzleGroupPtr->PuzzleTriggerArray.IsValidIndex(_pair.Key) && 
+			PuzzleGroupPtr->PuzzleTriggerArray[_pair.Key] != nullptr)
+		{
+			// ResetTrigger 호출 (내부적으로 Multicast_ResetTrigger를 호출)
+			PuzzleGroupPtr->PuzzleTriggerArray[_pair.Key]->ResetTrigger();
+		}
+	}
+}
+
+void ARoomController::ClearTriggerTimer(int32 PuzzleIndex)
+{
+	// 서버에서만 실행되도록 체크
+	if (!HasAuthority())
+	{
+		Server_ClearTriggerTimer(PuzzleIndex);
+		return;
+	}
+	
+	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleGroupArray.Num())
+		return;
+	
+	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
+	ClearTriggerTimerHandle(_puzzleGroupPtr);
+}
+
+void ARoomController::ClearTriggerTimerHandle(FPuzzleGroup* PuzzleGroupPtr)
+{
+	GetWorld()->GetTimerManager().ClearTimer(PuzzleGroupPtr->TriggerTimerHandle);
+	// 모든 타이머 트리거 초기화
+	for (auto& _pair : PuzzleGroupPtr->TimerTriggerMap)
+	{
+		_pair.Value = false;
+	}
+}
+
+void ARoomController::Server_ClearTriggerTimer_Implementation(int32 PuzzleIndex)
+{
+	ClearTriggerTimer(PuzzleIndex);
+}
 #pragma endregion Timer trigger
-
-//void ARoomController::OnActionDeactivated(int32 PuzzleIndex)
-//{
-//	FPuzzleGroup* _puzzleData = nullptr;
-//	int32 _puzzleIndex = -1;
-//	int32 _rawIndex = -1;
-//	if (!TryGetPuzzleData(PuzzleIndex, _puzzleData, _puzzleIndex, _rawIndex))
-//		return;
-//
-//	bool _isAllActionDeactivated = true;
-//	for (TObjectPtr<APuzzleActionBase> _puzzleAction : _puzzleData->PuzzleActionArray)
-//	{
-//		if (_puzzleAction == nullptr)
-//			continue;
-//
-//		if (_puzzleAction->IsActivate())
-//		{
-//			_isAllActionDeactivated = false;
-//			break;
-//		}
-//	}
-//
-//	if (_isAllActionDeactivated)
-//	{
-//		for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleData->PuzzleTriggerArray)
-//		{
-//			if (_puzzleTrigger == nullptr)
-//				continue;
-//
-//			_puzzleTrigger->ChangeTriggerVisibility(true);
-//		}
-//	}
-//}
-//
-//bool ARoomController::CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult)
-//{
-//	if (PuzzleDataPtr->TimerTriggerMap.Num() <= 0)
-//		return false;
-//
-//	for (auto& _pair : PuzzleDataPtr->TimerTriggerMap)
-//	{
-//		if (_pair.Value != hopeResult)
-//			return false;
-//	}
-//
-//	return true;
-//}
-//
-
-//
-//void ARoomController::Server_ClearTriggerTimer_Implementation(int32 PuzzleIndex)
-//{
-//	ClearTriggerTimer(PuzzleIndex);
-//}
-//
-//void ARoomController::ClearTriggerTimer(int32 PuzzleIndex)
-//{
-//	// 서버에서만 실행되도록 체크
-//	if (!HasAuthority())
-//	{
-//		Server_ClearTriggerTimer(PuzzleIndex);
-//		return;
-//	}
-//	
-//	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleDataArray.Num())
-//		return;
-//	
-//	FPuzzleGroup* _puzzleDataPtr = &_puzzleDataArray[PuzzleIndex];
-//	ClearTriggerTimerHandle(_puzzleDataPtr);
-//}
-//
-//void ARoomController::OnPuzzleTriggerTimeOut(FPuzzleGroup* PuzzleDataPtr)
-//{
-//	// 서버에서만 실행되는지 확인
-//	if (!HasAuthority())
-//		return;
-//		
-//	// 타이머 핸들 초기화
-//	ClearTriggerTimerHandle(PuzzleDataPtr);
-//	
-//	// 모든 타이머 트리거 리셋
-//	for (auto& _pair : PuzzleDataPtr->TimerTriggerMap)
-//	{
-//		// 트리거가 유효한지 확인
-//		if (PuzzleDataPtr->PuzzleTriggerArray.IsValidIndex(_pair.Key) && 
-//			PuzzleDataPtr->PuzzleTriggerArray[_pair.Key] != nullptr)
-//		{
-//			// ResetTrigger 호출 (내부적으로 Multicast_ResetTrigger를 호출)
-//			PuzzleDataPtr->PuzzleTriggerArray[_pair.Key]->ResetTrigger();
-//		}
-//	}
-//}
-//
-//void ARoomController::ClearTriggerTimerHandle(FPuzzleGroup* PuzzleDataPtr)
-//{
-//	GetWorld()->GetTimerManager().ClearTimer(PuzzleDataPtr->TriggerTimerHandle);
-//	// 모든 타이머 트리거 초기화
-//	for (auto& _pair : PuzzleDataPtr->TimerTriggerMap)
-//	{
-//		_pair.Value = false;
-//	}
-//}
 
 //bool ARoomController::TryGetValue(int32 PuzzleKey, bool*& OutValue)
 //{
