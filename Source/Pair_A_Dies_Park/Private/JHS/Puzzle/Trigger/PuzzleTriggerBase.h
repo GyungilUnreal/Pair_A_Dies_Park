@@ -7,6 +7,7 @@
 #include "PuzzleTriggerBase.generated.h"
 
 class ARoomController;
+class APuzzleActionBase;
 
 UENUM(BlueprintType)
 enum class E_PUZZLE_TRIGGER_TYPE : uint8
@@ -30,14 +31,14 @@ public:
 private:
 	TObjectPtr<ARoomController> _roomController = nullptr;
 
+	int32 _puzzleKey = -1;
+
 protected:
 	// 트리거 활성화 상태 (멀티캐스트로 동기화)
 	UPROPERTY()
 	bool _isTriggered = false;
 
 protected:
-	int32 _puzzleKey = -1;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Trigger")
 	bool _isLockOnTrigger = false;
 
@@ -49,6 +50,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Visibility")
 	bool _isDeactiveOnTrigger = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trigger|Direct Action")
+	TArray<TObjectPtr<APuzzleActionBase>> DirectActionArray;
 
 public:
 	bool IsTriggered() { return _isTriggered; }
