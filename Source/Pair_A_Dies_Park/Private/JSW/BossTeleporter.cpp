@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "JSW/BossTeleporter.h"
+#include "JSW/BossCharacter.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
@@ -74,6 +75,13 @@ void ABossTeleporter::TeleportAllPlayers()
 			if (PC)
 			{
 				PC->ClientSetCameraFade(true, FColor::Black, FVector2D(1.0f, 0.0f), 0.5f, false, true);
+			}
+			AActor* BossActor = UGameplayStatics::GetActorOfClass(GetWorld(), ABossCharacter::StaticClass());
+			ABossCharacter* Boss = Cast<ABossCharacter>(BossActor);
+
+			if (Boss)
+			{
+				Boss->WakeUpBoss();
 			}
 		}
 	}

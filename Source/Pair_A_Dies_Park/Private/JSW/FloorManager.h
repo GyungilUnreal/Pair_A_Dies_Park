@@ -64,6 +64,9 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamLife)
 	int32 TeamLife = 5;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ActivateClearVisuals();
+
 	UFUNCTION()
 	void OnRep_GridData();
 

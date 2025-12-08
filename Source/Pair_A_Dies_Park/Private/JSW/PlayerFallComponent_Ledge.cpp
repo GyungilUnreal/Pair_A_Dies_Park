@@ -3,7 +3,6 @@
 #include "Components/CapsuleComponent.h"
 #include "JSW/FloorManager.h"
 #include "JSW/FloorTile.h"
-#include "DrawDebugHelpers.h"
 
 void UPlayerFallComponent::CheckFallingCondition()
 {
@@ -58,8 +57,6 @@ bool UPlayerFallComponent::CheckLedgeTrace(FVector& OutLedgeLoc, FRotator& OutLe
 
 	const FVector ForwardStart = Start;
 	const FVector ForwardEnd = ForwardStart + (Forward * 150.f);
-
-	DrawDebugCapsule(GetWorld(), (ForwardStart + ForwardEnd) / 2, 75.f, 20.f, Forward.Rotation().Quaternion(), FColor::Red, false, 1.f);
 
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(OwnerCharacter);

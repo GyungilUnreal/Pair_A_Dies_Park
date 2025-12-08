@@ -10,6 +10,8 @@
 #include "Components/CapsuleComponent.h"
 #include "JSW/FloorManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "JSW/AI/AIC_Boss.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 ABossCharacter::ABossCharacter()
 {
@@ -40,6 +42,12 @@ void ABossCharacter::BeginPlay()
     // InitializeAbilities() 호출.
     Super::BeginPlay(); 
 
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (AIC)
+    {
+        AIC->GetBlackboardComponent()->SetValueAsBool(TEXT("IsAwake"), false);
+    }
+
     // 서버에서만 체력을 MaxHealth로 초기화.
     if (HasAuthority())
     {
@@ -48,6 +56,45 @@ void ABossCharacter::BeginPlay()
         // OnRep 함수를 수동으로 호출.
         OnRep_CurrentHealth();
     }
+}
+
+void ABossCharacter::WakeUpBoss()
+{
+    if (bIsAwake) return;
+    bIsAwake = true;
+
+    UE_LOG(LogTemp, Warning, TEXT(">>> BOSS IS WAKING UP! <<<"));
+
+    if (WakeUpMontage)
+    {
+        PlayAnimMontage(WakeUpMontage);
+    }
+
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (AIC && AIC->GetBlackboardComponent())
+    {
+        AIC->GetBlackboardComponent()->SetValueAsBool(TEXT("IsAwake"), true);
+    }
+
+}
+
+void ABossCharacter::Multicast_BossDeath_Implementation()
+{
+    if (DeathMontage)
+    {
+        PlayAnimMontage(DeathMontage);
+    }
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    if (GetController())
+    {
+        GetController()->StopMovement();
+        GetController()->UnPossess();
+    }
+
+    SetLifeSpan(3.0f);
 }
 
 void ABossCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -74,35 +121,17 @@ void ABossCharacter::Server_TakePuzzleDamage_Implementation(float DamageAmount)
 
     CurrentHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.f, MaxHealth);
 
-    // 서버 자신도 OnRep을 수동 호출해야 함
     OnRep_CurrentHealth();
 
     if (CurrentHealth <= 0.f)
     {
-        // AI 컨트롤러 정지
-        AAIController* AIC = Cast<AAIController>(GetController());
-        if (AIC)
-        {
-            AIC->StopMovement();
-            AIC->GetBrainComponent()->StopLogic(TEXT("Boss Died"));
-        }
-        // 죽는 몽타주 재생
-        if (DeathMontage)
-        {
-            PlayAnimMontage(DeathMontage);
-        }
+        CurrentHealth = 0.f;
 
-        // 충돌 끄기
-        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        GetCharacterMovement()->DisableMovement();
-
-        // 몽타주 길이만큼 시간이 지난 후 액터 파괴
-        SetLifeSpan(DeathMontage ? DeathMontage->GetPlayLength() : 5.0f);
+        Multicast_BossDeath();
 
         AFloorManager* FloorManager = Cast<AFloorManager>(
             UGameplayStatics::GetActorOfClass(GetWorld(), AFloorManager::StaticClass())
         );
-
         if (FloorManager)
         {
             FloorManager->ActivateClearItem();

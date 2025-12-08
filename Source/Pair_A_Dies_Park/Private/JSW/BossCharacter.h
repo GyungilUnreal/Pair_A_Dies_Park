@@ -25,6 +25,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Boss|Health")
 	FOnHealthChangedSignature OnHealthChanged;
 
+	UFUNCTION(BlueprintCallable, Category = "Boss")
+	void WakeUpBoss();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_BossDeath();
 protected:
 	// 플레이어 BeginPlay 로직 막기위함.
 	virtual void BeginPlay() override;
@@ -58,4 +63,10 @@ protected:
 	TObjectPtr<UAnimMontage> DeathMontage;
 	// 페이즈 로직용.
 	//bool bIsInPhase2;
+
+	bool bIsAwake = false;
+
+	// 깨어날 때 재생할 몽타주 (포효)
+	UPROPERTY(EditAnywhere, Category = "Boss")
+	UAnimMontage* WakeUpMontage;
 };

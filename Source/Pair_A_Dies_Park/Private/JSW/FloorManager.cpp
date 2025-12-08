@@ -37,16 +37,17 @@ void AFloorManager::ActivateClearItem()
 			}
 		}
 	}
+
+	Multicast_ActivateClearVisuals();
+}
+
+void AFloorManager::Multicast_ActivateClearVisuals_Implementation()
+{
 	UpdateVisualsFromState();
 
 	if (ClearRewardItem)
 	{
 		SetActorActive(ClearRewardItem, true);
-		UE_LOG(LogTemp, Warning, TEXT(">>> BOSS CLEARED! Reward Item Activated! <<<"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT(">>> ClearRewardItem is NULL! Please assign it in the Level Editor! <<<"));
 	}
 }
 
