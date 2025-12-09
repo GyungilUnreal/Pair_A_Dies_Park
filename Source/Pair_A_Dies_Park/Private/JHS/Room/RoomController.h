@@ -31,9 +31,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Action")
 	TArray<TObjectPtr<APuzzleActionBase>> PuzzleActionArray;
 
-	// Timer Trigger
-	TMap<int32, bool> TimerTriggerMap;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Puzzle Group|Timer")
 	float TimerLimit = 1.0f;
 
@@ -147,16 +144,10 @@ private:
 	UFUNCTION(Server, Reliable)
 	void Server_SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex);
 
-	bool CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult);
-
-	void OnPuzzleTriggerTimeOut(FPuzzleGroup* PuzzleGroupPtr);
-
-	void ClearTriggerTimer(int32 PuzzleIndex);
+	void ClearTriggerTimer(int32 PuzzleIndex, bool IsResetTrigger);
 
 	UFUNCTION(Server, Reliable)
-	void Server_ClearTriggerTimer(int32 PuzzleIndex);
-
-	void ClearTriggerTimerHandle(FPuzzleGroup* PuzzleGroupPtr);
+	void Server_ClearTriggerTimer(int32 PuzzleIndex, bool IsResetTrigger);
 
 	//bool TryGetValue(int32 PuzzleKey, bool*& OutValue);
 };

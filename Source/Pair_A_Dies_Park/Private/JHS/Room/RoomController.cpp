@@ -113,13 +113,12 @@ void ARoomController::ChangePuzzleTriggerState(int32 PuzzleKey, bool IsTriggered
 		}
 	}
 
-	// 모든 트리거 만족 시 트리거 타이머 해제 (서버 RPC 함수 호출)
-	if (_isActivate && CheckAllTimerTriggerValue(_puzzleGroupPtr, true))
-	{
-		ClearTriggerTimer(_puzzleIndex);
-	}
-
 	ChangePuzzleActionState(_puzzleIndex, _isActivate);
+	// 타이머 트리거 초기화
+	if (_isActivate)
+	{
+		ClearTriggerTimer(_puzzleIndex, false);
+	}
 }
 
 void ARoomController::Server_ChangePuzzleTriggerState_Implementation(int32 PuzzleKey, bool IsTriggered)
@@ -263,7 +262,6 @@ void ARoomController::InitializeRoomController()
 			// 퍼즐 그룹 복사
 			FPuzzleGroup _newPuzzleGroup = _puzzleInfo.PuzzleGroup;
 			_newPuzzleGroup.IsPuzzleActivated = false;
-			_newPuzzleGroup.TimerTriggerMap.Empty();
 
 			int32 _puzzleGroupIndex = _puzzleGroupArray.Num();
 			_puzzleGroupArray.Add(_newPuzzleGroup);
@@ -280,11 +278,6 @@ void ARoomController::InitializeRoomController()
 					continue;
 
 				_trigger->InitializePuzzleTrigger(this, _puzzleKey);
-
-				if (_trigger->IsTimerTrigger())
-				{
-					_puzzleGroupPtr->TimerTriggerMap.Add(j, false);
-				}
 			}
 
 			// 퍼즐 액션 초기화
@@ -328,19 +321,11 @@ void ARoomController::SetTriggerTimer(int32 PuzzleIndex, int32 TriggerIndex)
 		return;
 	
 	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
-	if (!_puzzleGroupPtr->TimerTriggerMap.Contains(TriggerIndex))
-		return;
-	
-	// 모든 타이머 트리거가 false인지 확인
-	if (CheckAllTimerTriggerValue(_puzzleGroupPtr, false))
-	{
-		_puzzleGroupPtr->TimerTriggerMap[TriggerIndex] = true;
-	}
 	
 	// 타이머 설정
 	GetWorld()->GetTimerManager().SetTimer(
 		_puzzleGroupPtr->TriggerTimerHandle, 
-		FTimerDelegate::CreateUObject(this, &ARoomController::OnPuzzleTriggerTimeOut, _puzzleGroupPtr), 
+		FTimerDelegate::CreateUObject(this, &ARoomController::ClearTriggerTimer, PuzzleIndex, true),
 		_puzzleGroupPtr->TimerLimit, 
 		false
 	);
@@ -351,71 +336,37 @@ void ARoomController::Server_SetTriggerTimer_Implementation(int32 PuzzleIndex, i
 	SetTriggerTimer(PuzzleIndex, TriggerIndex);
 }
 
-bool ARoomController::CheckAllTimerTriggerValue(FPuzzleGroup* PuzzleDataPtr, bool hopeResult)
-{
-	if (PuzzleDataPtr->TimerTriggerMap.Num() <= 0)
-		return false;
-
-	for (auto& _pair : PuzzleDataPtr->TimerTriggerMap)
-	{
-		if (_pair.Value != hopeResult)
-			return false;
-	}
-
-	return true;
-}
-
-void ARoomController::OnPuzzleTriggerTimeOut(FPuzzleGroup* PuzzleGroupPtr)
-{
-	// 서버에서만 실행되는지 확인
-	if (!HasAuthority())
-		return;
-		
-	// 타이머 핸들 초기화
-	ClearTriggerTimerHandle(PuzzleGroupPtr);
-	
-	// 모든 타이머 트리거 리셋
-	for (auto& _pair : PuzzleGroupPtr->TimerTriggerMap)
-	{
-		// 트리거가 유효한지 확인
-		if (PuzzleGroupPtr->PuzzleTriggerArray.IsValidIndex(_pair.Key) && 
-			PuzzleGroupPtr->PuzzleTriggerArray[_pair.Key] != nullptr)
-		{
-			// ResetTrigger 호출 (내부적으로 Multicast_ResetTrigger를 호출)
-			PuzzleGroupPtr->PuzzleTriggerArray[_pair.Key]->ResetTrigger();
-		}
-	}
-}
-
-void ARoomController::ClearTriggerTimer(int32 PuzzleIndex)
+void ARoomController::ClearTriggerTimer(int32 PuzzleIndex, bool IsResetTrigger)
 {
 	// 서버에서만 실행되도록 체크
 	if (!HasAuthority())
 	{
-		Server_ClearTriggerTimer(PuzzleIndex);
+		Server_ClearTriggerTimer(PuzzleIndex, IsResetTrigger);
 		return;
 	}
+
 	
 	if (PuzzleIndex < 0 || PuzzleIndex >= _puzzleGroupArray.Num())
 		return;
 	
 	FPuzzleGroup* _puzzleGroupPtr = &_puzzleGroupArray[PuzzleIndex];
-	ClearTriggerTimerHandle(_puzzleGroupPtr);
-}
+	GetWorld()->GetTimerManager().ClearTimer(_puzzleGroupPtr->TriggerTimerHandle);
 
-void ARoomController::ClearTriggerTimerHandle(FPuzzleGroup* PuzzleGroupPtr)
-{
-	GetWorld()->GetTimerManager().ClearTimer(PuzzleGroupPtr->TriggerTimerHandle);
-	// 모든 타이머 트리거 초기화
-	for (auto& _pair : PuzzleGroupPtr->TimerTriggerMap)
+	if (!IsResetTrigger)
+		return;
+
+	for (TObjectPtr<APuzzleTriggerBase> _puzzleTrigger : _puzzleGroupPtr->PuzzleTriggerArray)
 	{
-		_pair.Value = false;
+		if (_puzzleTrigger == nullptr || !_puzzleTrigger->IsTimerTrigger())
+			continue;
+
+		_puzzleTrigger->ResetTrigger();
 	}
 }
 
-void ARoomController::Server_ClearTriggerTimer_Implementation(int32 PuzzleIndex)
+void ARoomController::Server_ClearTriggerTimer_Implementation(int32 PuzzleIndex, bool IsResetTrigger)
 {
-	ClearTriggerTimer(PuzzleIndex);
+	ClearTriggerTimer(PuzzleIndex, IsResetTrigger);
 }
 #pragma endregion Timer trigger
 

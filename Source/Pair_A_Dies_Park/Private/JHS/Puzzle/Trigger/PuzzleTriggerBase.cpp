@@ -3,6 +3,7 @@
 
 #include "JHS/Puzzle/Trigger/PuzzleTriggerBase.h"
 #include "JHS/Room/RoomController.h"
+#include "JHS/Puzzle/Action/PuzzleActionBase.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
@@ -95,6 +96,21 @@ void APuzzleTriggerBase::Multicast_ChangeTriggered_Implementation(bool IsTrigger
 	else
 	{
 		TriggerExitEffect();
+	}
+
+	for (TObjectPtr<APuzzleActionBase> _puzzleAction : DirectActionArray)
+	{
+		if (_puzzleAction == nullptr)
+			continue;
+
+		if (_isTriggered)
+		{
+			_puzzleAction->ActivatePuzzleAction();
+		}
+		else
+		{
+			_puzzleAction->DeactivatePuzzleAction();
+		}
 	}
 }
 
