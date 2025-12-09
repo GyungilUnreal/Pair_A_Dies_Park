@@ -30,7 +30,7 @@ UGameSettingsSubsystem::UGameSettingsSubsystem()
     }
 
     static ConstructorHelpers::FObjectFinder<USoundMix> MainMix(
-        TEXT("/Game/Audio/Mixes/MainSoundMix.MainSoundMix"));
+        TEXT("/Game/Collaborators/LKH/Split/SFX/MainSoundMix.MainSoundMix"));
     if (MainMix.Succeeded())
     {
         MainSoundMix = MainMix.Object;
