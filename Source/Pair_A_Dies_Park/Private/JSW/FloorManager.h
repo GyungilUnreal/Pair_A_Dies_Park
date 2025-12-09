@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "LevelSequenceActor.h"
 #include "FloorManager.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeamLifeChanged, int32, NewLife);
@@ -60,6 +61,12 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Cinematic")
+	TObjectPtr<ALevelSequenceActor> IntroSequenceActor;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayLevelIntro();
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamLife)
 	int32 TeamLife = 5;

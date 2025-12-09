@@ -30,61 +30,41 @@ void AAIC_Boss::OnPossess(APawn* InPawn)
 		UBlackboardComponent* BlackboardComp;
 		UseBlackboard(BlackboardAsset, BlackboardComp);
 
-		FindPlayerAndRunBT();
+		RunBehaviorTree(BehaviorTreeAsset);
 	}
 }
 
-void AAIC_Boss::FindPlayerAndRunBT()
+void AAIC_Boss::InitBossFight()
 {
-	// 2명의 플레이어를 찾아 블랙보드 키에 저장.
+	// 플레이어 컨트롤러 찾기
 	TArray<AActor*> FoundPlayerControllers;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerController::StaticClass(), FoundPlayerControllers);
 
 	TArray<AActor*> FoundPlayerPawns;
-
 	for (AActor* PC_Actor : FoundPlayerControllers)
 	{
-		APlayerController* PC = Cast<APlayerController>(PC_Actor);
-		if (PC)
+		if (APlayerController* PC = Cast<APlayerController>(PC_Actor))
 		{
-			APawn* PlayerPawn = PC->GetPawn();
-			if (PlayerPawn && Cast<ASplit_Character>(PlayerPawn))
+			if (APawn* PlayerPawn = PC->GetPawn())
 			{
 				FoundPlayerPawns.Add(PlayerPawn);
 			}
 		}
 	}
 
-	// 플레이어를 못찾으면
-	if (FoundPlayerPawns.Num() == 0)
+	// 블랙보드 세팅
+	UBlackboardComponent* BB = GetBlackboardComponent();
+	if (BB && FoundPlayerPawns.Num() > 0)
 	{
-		GetWorld()->GetTimerManager().SetTimer(
-			FindPlayersTimerHandle,
-			this,
-			&AAIC_Boss::FindPlayerAndRunBT,
-			1.0f,
-			false
-		);
-	}
-	// 플레이어를 찾으면
-	else
-	{
-		// 타이머 중지
-		GetWorld()->GetTimerManager().ClearTimer(FindPlayersTimerHandle);
-		// 블랙보드 값 세팅
-		UBlackboardComponent* BlackboardComp = GetBlackboardComponent();
+		BB->SetValueAsObject(FBossBlackboardKeys::TargetPlayer1Key, FoundPlayerPawns[0]);
 
-		if (FoundPlayerPawns.Num() > 0)
-		{
-			BlackboardComp->SetValueAsObject(FBossBlackboardKeys::TargetPlayer1Key, FoundPlayerPawns[0]);
-			BlackboardComp->SetValueAsObject(FBossBlackboardKeys::FocusTargetKey, FoundPlayerPawns[0]);
-		}
+		BB->SetValueAsObject(FBossBlackboardKeys::FocusTargetKey, FoundPlayerPawns[0]);
 
 		if (FoundPlayerPawns.Num() > 1)
 		{
-			BlackboardComp->SetValueAsObject(FBossBlackboardKeys::TargetPlayer2Key, FoundPlayerPawns[1]);
+			BB->SetValueAsObject(FBossBlackboardKeys::TargetPlayer2Key, FoundPlayerPawns[1]);
 		}
+
+		BB->SetValueAsBool(TEXT("IsAwake"), true);
 	}
-	// 행동트리 실행.
-	RunBehaviorTree(BehaviorTreeAsset);
 }

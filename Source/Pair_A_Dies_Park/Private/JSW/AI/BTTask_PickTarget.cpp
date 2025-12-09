@@ -17,26 +17,55 @@ EBTNodeResult::Type UBTTask_PickTarget::ExecuteTask(UBehaviorTreeComponent& Owne
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
 	if (!BlackboardComp) return EBTNodeResult::Failed;
 
-	// 현재 타겟과 두 플레이어 정보를 가져옴.
-	UObject* CurrentTarget = BlackboardComp->GetValueAsObject(FBossBlackboardKeys::FocusTargetKey);
-	UObject* Player1 = BlackboardComp->GetValueAsObject(FBossBlackboardKeys::TargetPlayer1Key);
-	UObject* Player2 = BlackboardComp->GetValueAsObject(FBossBlackboardKeys::TargetPlayer2Key);
+	AAIController* AIC = OwnerComp.GetAIOwner();
+	APawn* BossPawn = AIC ? AIC->GetPawn() : nullptr;
+	if (!BossPawn) return EBTNodeResult::Failed;
 
-	// 플레이어가 없으면
-	if (!Player1 && !Player2) return EBTNodeResult::Failed;
+	AActor* CurrentTarget = Cast<AActor>(BlackboardComp->GetValueAsObject(FBossBlackboardKeys::FocusTargetKey));
+	AActor* Player1 = Cast<AActor>(BlackboardComp->GetValueAsObject(FBossBlackboardKeys::TargetPlayer1Key));
+	AActor* Player2 = Cast<AActor>(BlackboardComp->GetValueAsObject(FBossBlackboardKeys::TargetPlayer2Key));
 
-	// 어그로 교체 로직. 
-	UObject* NewTarget = nullptr;
-	if (CurrentTarget == Player1 && Player2)
+	TArray<AActor*> Candidates;
+	if (Player1) Candidates.Add(Player1);
+	if (Player2) Candidates.Add(Player2);
+
+	if (Candidates.Num() == 0) return EBTNodeResult::Failed;
+
+	AActor* NewTarget = nullptr;
+
+	// 현재 타겟이 없거나 죽었으면 -> 가장 가까운 놈 찾기
+	if (!CurrentTarget)
 	{
-		NewTarget = Player2;
+		float MinDistSq = FLT_MAX;
+		for (AActor* Candidate : Candidates)
+		{
+			float DistSq = FVector::DistSquared(BossPawn->GetActorLocation(), Candidate->GetActorLocation());
+			if (DistSq < MinDistSq)
+			{
+				MinDistSq = DistSq;
+				NewTarget = Candidate;
+			}
+		}
 	}
+	// 현재 타겟이 잘 살아있다면 -> 다른 플레이어로 어그로
 	else
 	{
-		NewTarget = Player1;
+		if (Candidates.Num() > 1)
+		{
+			if (CurrentTarget == Player1) NewTarget = Player2;
+			else NewTarget = Player1;
+		}
+		else
+		{
+			NewTarget = CurrentTarget;
+		}
 	}
-	// 블랙보드의 FocusTargetKey를 새 타겟으로 덮어씌움.
-	BlackboardComp->SetValueAsObject(FBossBlackboardKeys::FocusTargetKey, NewTarget);
 
-	return EBTNodeResult::Succeeded;
+	if (NewTarget)
+	{
+		BlackboardComp->SetValueAsObject(FBossBlackboardKeys::FocusTargetKey, NewTarget);
+		return EBTNodeResult::Succeeded;
+	}
+
+	return EBTNodeResult::Failed;
 }
