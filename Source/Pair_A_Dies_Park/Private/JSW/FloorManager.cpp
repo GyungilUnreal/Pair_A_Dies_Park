@@ -5,6 +5,9 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerStart.h"
+#include "LevelSequencePlayer.h" 
+#include "Split_Character.h"
+#include "JHS/GameControll/MyPlayerController.h"
 
 AFloorManager::AFloorManager()
 {
@@ -69,6 +72,12 @@ void AFloorManager::BeginPlay()
 			SetActorActive(ClearRewardItem, false);
 			UE_LOG(LogTemp, Log, TEXT("ClearRewardItem Hidden by FloorManager BeginPlay"));
 		}
+	}
+
+	if (HasAuthority() && IntroSequenceActor)
+	{
+		FTimerHandle IntroTimer;
+		GetWorld()->GetTimerManager().SetTimer(IntroTimer, this, &AFloorManager::Multicast_PlayLevelIntro, 2.0f, false);
 	}
 
 	TArray<AActor*> FoundCubes;
@@ -141,6 +150,23 @@ void AFloorManager::BeginPlay()
 	}
 
 	UpdateVisualsFromState();
+}
+
+void AFloorManager::Multicast_PlayLevelIntro_Implementation()
+{
+	if (!IntroSequenceActor || !IntroSequenceActor->GetSequencePlayer()) return;
+
+	IntroSequenceActor->GetSequencePlayer()->Play();
+	UE_LOG(LogTemp, Warning, TEXT(">>> Level Intro Started! <<<"));
+
+	float Duration = IntroSequenceActor->GetSequencePlayer()->GetDuration().AsSeconds();
+
+	FTimerHandle EndTimer;
+	GetWorld()->GetTimerManager().SetTimer(EndTimer, [this]()
+	{
+		UE_LOG(LogTemp, Warning, TEXT(">>> Level Intro Finished! Input Unlocked. <<<"));
+
+	}, Duration, false);
 }
 
 void AFloorManager::OnRep_GridData()
