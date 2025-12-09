@@ -70,12 +70,11 @@ void ABossCharacter::WakeUpBoss()
         PlayAnimMontage(WakeUpMontage);
     }
 
-    AAIController* AIC = Cast<AAIController>(GetController());
-    if (AIC && AIC->GetBlackboardComponent())
+    AAIC_Boss* BossAIC = Cast<AAIC_Boss>(GetController());
+    if (BossAIC)
     {
-        AIC->GetBlackboardComponent()->SetValueAsBool(TEXT("IsAwake"), true);
+        BossAIC->InitBossFight();
     }
-
 }
 
 void ABossCharacter::Multicast_BossDeath_Implementation()

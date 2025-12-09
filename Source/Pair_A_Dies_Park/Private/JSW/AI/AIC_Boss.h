@@ -25,14 +25,11 @@ class AAIC_Boss : public AAIController
 public:
 	AAIC_Boss();
 
+	void InitBossFight();
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 
 private:
-	FTimerHandle FindPlayersTimerHandle;
-
-	void FindPlayerAndRunBT();
-
 	// 행동트리 에셋
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
