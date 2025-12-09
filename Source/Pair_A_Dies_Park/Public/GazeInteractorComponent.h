@@ -92,7 +92,7 @@ protected:
 	void CollectCandidatesAlongGaze(const FVector& Start, const FVector& Forward, TArray<FGazeCandidate>& InOutCandidates, FGazeCandidate& InOutBest, const FCollisionQueryParams& Params);
 
 	// 플레이어 주변을 한 번에 오버랩해서 후보 수집 (1단계에서 못 찾았을 때)
-	void CollectCandidatesAroundPlayer(const FVector& Origin, TArray<FGazeCandidate>& InOutCandidates, FGazeCandidate& InOutBest, const FCollisionQueryParams& Params);
+	void CollectCandidatesAroundPlayer(const FVector& Origin, TArray<FGazeCandidate>& InOutCandidates, const FCollisionQueryParams& Params);
 
 	// 최종 타깃 위젯 표시
 	void ShowWidgetForSet(AActor* TargetActor, int32 SetIndex);
@@ -143,6 +143,10 @@ public:
 	// 시선 라인을 몇 구간으로 나눌지
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze")
 	int32 GazeSweepSteps;
+
+	// 시작위치 Offset
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze")
+	float TraceOffset;
 
 	// 각 구간에서 스윕할 반경
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gaze")

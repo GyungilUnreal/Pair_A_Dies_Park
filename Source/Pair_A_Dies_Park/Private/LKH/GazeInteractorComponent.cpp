@@ -18,6 +18,7 @@ UGazeInteractorComponent::UGazeInteractorComponent()
 
 	TraceDistance = 800.f;
 	GazeSweepSteps = 8;
+	TraceOffset = 30.f;
 	ComponentDetectRadius = 40.f;
 	PlayerOverlapRadius = 200.f;
 
@@ -84,8 +85,9 @@ void UGazeInteractorComponent::PerformGazeTrace()
 	if (!CameraComp)
 		return;
 
-	const FVector Start = CameraComp->GetComponentLocation();
+	const FVector CameraLoc = CameraComp->GetComponentLocation();
 	const FVector Forward = CameraComp->GetComponentRotation().Vector();
+	const FVector Start = CameraLoc + Forward * TraceOffset;
 	const FVector End = Start + Forward * TraceDistance;
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(Gaze), false, Owner);
@@ -105,11 +107,8 @@ void UGazeInteractorComponent::PerformGazeTrace()
 	// 1) 시선 따라 여러 구간 스윕
 	CollectCandidatesAlongGaze(Start, Forward, AllCandidates, BestCandidate, Params);
 
-	// 2) 시선에서 못 찾았다면 플레이어 주변 오버랩
-	if (!BestCandidate.Actor.IsValid())
-	{
-		CollectCandidatesAroundPlayer(Owner->GetActorLocation(), AllCandidates, BestCandidate, Params);
-	}
+	// 2) 주변 범위 후보 수집
+	CollectCandidatesAroundPlayer(Owner->GetActorLocation(), AllCandidates, Params);
 
 	// 최종 적용
 	if (BestCandidate.Actor.IsValid() && BestCandidate.SetIndex != INDEX_NONE)
@@ -216,7 +215,10 @@ void UGazeInteractorComponent::CollectCandidatesAlongGaze(const FVector& Start, 
 	}
 }
 
-void UGazeInteractorComponent::CollectCandidatesAroundPlayer(const FVector& Origin, TArray<FGazeCandidate>& InOutCandidates, FGazeCandidate& InOutBest, const FCollisionQueryParams& Params)
+void UGazeInteractorComponent::CollectCandidatesAroundPlayer(
+	const FVector& Origin,
+	TArray<FGazeCandidate>& InOutCandidates,
+	const FCollisionQueryParams& Params)
 {
 	TArray<FOverlapResult> Overlaps;
 
@@ -271,11 +273,7 @@ void UGazeInteractorComponent::CollectCandidatesAroundPlayer(const FVector& Orig
 
 		InOutCandidates.Add(NewCand);
 
-		// 아직 베스트가 없으면 이것도 베스트가 될 수 있음
-		if (!InOutBest.Actor.IsValid() || NewCand.DistSqFromView < InOutBest.DistSqFromView)
-		{
-			InOutBest = NewCand;
-		}
+		// 여기서는 BestCandidate(인자 자체가 없음)를 절대 갱신하지 않는다
 	}
 }
 
@@ -316,6 +314,17 @@ bool UGazeInteractorComponent::FindMatchedComponentInActor(AActor* Actor, UActor
 
 void UGazeInteractorComponent::ShowWidgetForSet(AActor* TargetActor, int32 SetIndex)
 {
+	// 추가: 이 Actor가 이전 프레임까지 후보였다면 후보 위젯 정리
+	if (UWidgetComponent** FoundCand = CandidateWidgetMap.Find(TargetActor))
+	{
+		if (UWidgetComponent* CandWidget = *FoundCand)
+		{
+			CandWidget->DestroyComponent();
+		}
+		CandidateWidgetMap.Remove(TargetActor);
+	}
+
+	// 기존 코드
 	HideCurrentWidget();
 
 	if (!TargetActor || !DetectSets.IsValidIndex(SetIndex))
@@ -326,7 +335,6 @@ void UGazeInteractorComponent::ShowWidgetForSet(AActor* TargetActor, int32 SetIn
 		return;
 
 	CurrentWidgetComp = SpawnWidgetOnActor(TargetActor, Set.WidgetClass, Set.MainWidgetOffset);
-
 	ApplyGazeTextIfAny(TargetActor, CurrentWidgetComp);
 }
 
@@ -405,22 +413,26 @@ UWidgetComponent* UGazeInteractorComponent::SpawnWidgetOnActor(
 
 void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidate>& Candidates, const FGazeCandidate& FinalTarget)
 {
-	// 이번 프레임에 살아있는 후보 액터들
+	// 추가: 최종 타깃 액터 Raw 포인터로 뽑아 두기
+	AActor* FinalTargetActor = FinalTarget.Actor.Get();
+
 	TSet<TWeakObjectPtr<AActor>> ThisFrameActors;
 
 	for (const FGazeCandidate& C : Candidates)
 	{
-		// 최종 타깃은 후보 위젯 만들지 않는다
-		if (FinalTarget.Actor.IsValid() && C.Actor == FinalTarget.Actor)
-			continue;
-
 		AActor* Actor = C.Actor.Get();
 		if (!Actor)
 			continue;
 
+		// 수정: WeakPtr 비교 대신 Raw 포인터 비교
+		if (FinalTargetActor && Actor == FinalTargetActor)
+		{
+			// 최종 타깃은 후보 위젯 만들지 않는다
+			continue;
+		}
+
 		ThisFrameActors.Add(C.Actor);
 
-		// 세트 유효성 검사
 		if (!DetectSets.IsValidIndex(C.SetIndex))
 			continue;
 
@@ -428,25 +440,20 @@ void UGazeInteractorComponent::UpdateCandidateWidgets(const TArray<FGazeCandidat
 		if (!*Set.CandidateWidgetClass)
 			continue;
 
-		// 이미 후보 위젯이 있는지 확인
 		if (UWidgetComponent** FoundPtr = CandidateWidgetMap.Find(Actor))
 		{
 			if (UWidgetComponent* FoundWidget = *FoundPtr)
 			{
-				// 세트별 후보 오프셋으로 위치 정리
 				FoundWidget->SetRelativeLocation(Set.CandidateWidgetOffset);
-				// 필요하면 텍스트도 매 프레임 맞춰줌
 				ApplyGazeTextIfAny(Actor, FoundWidget);
 			}
 		}
 		else
 		{
-			// 새 후보 위젯 생성 (세트별 후보 오프셋 사용)
 			UWidgetComponent* NewWidget = SpawnWidgetOnActor(Actor, Set.CandidateWidgetClass, Set.CandidateWidgetOffset);
 			if (NewWidget)
 			{
 				CandidateWidgetMap.Add(Actor, NewWidget);
-				// 새로 생긴 위젯에도 텍스트 적용
 				ApplyGazeTextIfAny(Actor, NewWidget);
 			}
 		}
