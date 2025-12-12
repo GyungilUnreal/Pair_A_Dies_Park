@@ -14,6 +14,13 @@ class AMyPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	
+public:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cinematic")
+	void PlayBossIntro(class ALevelSequenceActor* SequenceActor);
+
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void SetFullScreenCinematic(bool bIsCinematic);
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 };

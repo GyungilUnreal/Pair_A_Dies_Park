@@ -65,8 +65,9 @@ protected:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Cinematic")
 	TObjectPtr<ALevelSequenceActor> IntroSequenceActor;
 
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_PlayLevelIntro();
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, Category = "Intro")
+	void MulticastPlayLevelIntro(class ALevelSequenceActor* SequenceActor);
+	// TODO - FloorManager에서 실행했던 인트로를 LobbyPC에 OnLoadingSuccess에 넣어줘야 타이밍 맞게 진행함.
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamLife)
 	int32 TeamLife = 5;

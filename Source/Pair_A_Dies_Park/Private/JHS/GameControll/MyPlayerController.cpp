@@ -8,6 +8,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "CharacterFunctionLibrary.h"
 
+void AMyPlayerController::SetFullScreenCinematic(bool bIsCinematic)
+{
+    if (GetWorld() && GetWorld()->GetGameViewport())
+    {
+        GetWorld()->GetGameViewport()->SetForceDisableSplitscreen(bIsCinematic);
+    }
+}
+
 void AMyPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
