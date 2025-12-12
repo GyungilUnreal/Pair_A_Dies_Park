@@ -74,12 +74,6 @@ void AFloorManager::BeginPlay()
 		}
 	}
 
-	if (HasAuthority() && IntroSequenceActor)
-	{
-		FTimerHandle IntroTimer;
-		GetWorld()->GetTimerManager().SetTimer(IntroTimer, this, &AFloorManager::Multicast_PlayLevelIntro, 2.0f, false);
-	}
-
 	TArray<AActor*> FoundCubes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorTile::StaticClass(), FoundCubes);
 
@@ -152,21 +146,26 @@ void AFloorManager::BeginPlay()
 	UpdateVisualsFromState();
 }
 
-void AFloorManager::Multicast_PlayLevelIntro_Implementation()
+void AFloorManager::MulticastPlayLevelIntro_Implementation(ALevelSequenceActor* SequenceActor)
 {
-	if (!IntroSequenceActor || !IntroSequenceActor->GetSequencePlayer()) return;
-
-	IntroSequenceActor->GetSequencePlayer()->Play();
-	UE_LOG(LogTemp, Warning, TEXT(">>> Level Intro Started! <<<"));
-
-	float Duration = IntroSequenceActor->GetSequencePlayer()->GetDuration().AsSeconds();
-
-	FTimerHandle EndTimer;
-	GetWorld()->GetTimerManager().SetTimer(EndTimer, [this]()
+	if (SequenceActor == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT(">>> Level Intro Finished! Input Unlocked. <<<"));
+		SequenceActor = this->IntroSequenceActor;
+	}
 
-	}, Duration, false);
+	if (!SequenceActor)
+	{
+		SequenceActor = Cast<ALevelSequenceActor>(
+			UGameplayStatics::GetActorOfClass(GetWorld(), ALevelSequenceActor::StaticClass())
+		);
+	}
+
+	APlayerController* LocalPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+
+	if (AMyPlayerController* MyPC = Cast<AMyPlayerController>(LocalPC))
+	{
+		MyPC->PlayBossIntro(SequenceActor);
+	}
 }
 
 void AFloorManager::OnRep_GridData()
@@ -346,7 +345,11 @@ void AFloorManager::ModifyTeamLife(int32 Amount)
 
 	if (TeamLife <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GAME OVERRRRR"));
+		FTimerHandle RestartTimer;
+		GetWorld()->GetTimerManager().SetTimer(RestartTimer, [this]()
+		{
+			GetWorld()->ServerTravel("?Restart");
+		}, 3.0f, false);
 	}
 }
 

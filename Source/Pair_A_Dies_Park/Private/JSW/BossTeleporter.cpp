@@ -53,35 +53,27 @@ void ABossTeleporter::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* 
 void ABossTeleporter::TeleportAllPlayers()
 {
 	FVector TargetLoc = GetActorLocation() + TeleportTargetOffset;
-
 	TArray<AActor*> PlayersToTeleport = OverlappingPlayers;
+
+	AActor* BossActor = UGameplayStatics::GetActorOfClass(GetWorld(), ABossCharacter::StaticClass());
+	if (ABossCharacter* Boss = Cast<ABossCharacter>(BossActor))
+	{
+		Boss->WakeUpBoss();
+	}
 
 	for (AActor* Actor : PlayersToTeleport)
 	{
-		ACharacter* Char = Cast<ACharacter>(Actor);
-		if (Char)
+		if (ACharacter* Char = Cast<ACharacter>(Actor))
 		{
-			// 화면 깜빡임
 			APlayerController* PC = Cast<APlayerController>(Char->GetController());
-			if (PC)
-			{
-				PC->ClientSetCameraFade(true, FColor::Black, FVector2D(0.0f, 1.0f), 0.5f, true, true);
-			}
 
-			// 위치 이동 
 			Char->SetActorLocation(TargetLoc);
 
-			// 화면 켜기
 			if (PC)
 			{
-				PC->ClientSetCameraFade(true, FColor::Black, FVector2D(1.0f, 0.0f), 0.5f, false, true);
-			}
-			AActor* BossActor = UGameplayStatics::GetActorOfClass(GetWorld(), ABossCharacter::StaticClass());
-			ABossCharacter* Boss = Cast<ABossCharacter>(BossActor);
+				PC->ClientSetCameraFade(true, FColor::Black, FVector2D(1.0f, 0.0f), 1.0f, false, true);
 
-			if (Boss)
-			{
-				Boss->WakeUpBoss();
+				OnTeleportFinished(PC);
 			}
 		}
 	}

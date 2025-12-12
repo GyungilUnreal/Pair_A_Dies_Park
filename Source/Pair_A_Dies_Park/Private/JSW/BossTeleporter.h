@@ -16,6 +16,12 @@ class ABossTeleporter : public AActor
 public:
 	ABossTeleporter();
 
+	UFUNCTION(BlueprintCallable, Category = "Teleport")
+	void TeleportAllPlayers();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Teleport")
+	void OnTeleportFinished(APlayerController* PC);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -42,5 +48,4 @@ protected:
 	UFUNCTION()
 	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	void TeleportAllPlayers();
 };
