@@ -1,8 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Lobby_GameMode.h"
 #include "Engine/World.h"
+#include "LobbyPlayerState.h"
+#include "OnlineSubsystem.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 
 void ALobby_GameMode::BP_ServerTravel(const FString& MapPath, bool bListen, bool bAbsolute)
 {
@@ -34,4 +36,32 @@ void ALobby_GameMode::BP_ServerTravel(const FString& MapPath, bool bListen, bool
     // 실제 서버 트래블 호출
     // bAbsolute = true 이면 절대 경로, 아니면 상대
     World->ServerTravel(FinalURL, bAbsolute);
+}
+
+void ALobby_GameMode::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+
+    ALobbyPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<ALobbyPlayerState>() : nullptr;
+    if (!PS) return;
+
+    // 닉네임은 일단 PlayerState 기본값을 써도 됨(대부분 Steam 닉네임이 들어있음)
+    const FString Nick = PS->GetPlayerName();
+
+    // SteamID는 OSS에서 얻는 걸 추천 (환경에 따라 빈 문자열일 수 있음)
+    FString SteamIdStr;
+
+    if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+    {
+        if (IOnlineIdentityPtr Identity = OSS->GetIdentityInterface())
+        {
+            TSharedPtr<const FUniqueNetId> Id = Identity->GetUniquePlayerId(0);
+            if (Id.IsValid())
+            {
+                SteamIdStr = Id->ToString();
+            }
+        }
+    }
+
+    PS->ServerSetSteamIdentity(SteamIdStr, Nick);
 }

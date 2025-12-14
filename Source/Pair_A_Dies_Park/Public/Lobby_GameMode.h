@@ -19,4 +19,8 @@ public:
     // 블루프린트에서 부를 수 있는 서버 트래블 래퍼
     UFUNCTION(BlueprintCallable, Category = "Travel")
     void BP_ServerTravel(const FString& MapPath, bool bListen = true, bool bAbsolute = false);
+
+protected:
+    virtual void PostLogin(APlayerController* NewPlayer) override;
+
 };

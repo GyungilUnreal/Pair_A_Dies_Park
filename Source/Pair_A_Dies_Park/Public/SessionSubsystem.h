@@ -18,7 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSessionDestroyComplete, bool, bWasS
 /**
  * 온라인 세션을 생성, 검색, 참가, 삭제하는 GameInstanceSubsystem
  */
-UCLASS()
+UCLASS(Config = Game)
 class USessionSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -85,4 +85,9 @@ private:
 
 	// 마지막 세션 설정 저장 (재시도용)
 	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
+
+	UPROPERTY(Config)
+	bool bEnableLegacySessionSubsystem = false;
+
+	FORCEINLINE bool IsLegacyEnabled() const { return bEnableLegacySessionSubsystem; }
 };

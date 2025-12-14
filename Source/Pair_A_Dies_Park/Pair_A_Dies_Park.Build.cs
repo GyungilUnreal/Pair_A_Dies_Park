@@ -11,8 +11,9 @@ public class Pair_A_Dies_Park : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", 
 			"GameplayAbilities", "GameplayTags", "GameplayTasks", 
 			"UMG", "SlateCore",
-			"OnlineSubsystem", "OnlineSubsystemUtils",
-            "LevelSequence", "MovieScene"
+			"OnlineSubsystem", "OnlineSubsystemUtils", "OnlineSubsystemSteam",
+            "LevelSequence", "MovieScene",
+			"Steamworks"
         });
 
         DynamicallyLoadedModuleNames.Add("OnlineSubsystemNull");

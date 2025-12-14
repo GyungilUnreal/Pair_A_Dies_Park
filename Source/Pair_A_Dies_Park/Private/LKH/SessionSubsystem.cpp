@@ -11,15 +11,18 @@ void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	// 온라인 서브시스템 가져오기
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[LegacySessionSubsystem] Disabled by config. Skipping init."));
+		return;
+	}
+
 	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
 	if (OnlineSubsystem)
 	{
 		SessionInterface = OnlineSubsystem->GetSessionInterface();
-
 		if (SessionInterface.IsValid())
 		{
-			// 델리게이트 바인딩
 			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnCreateSessionComplete);
 			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &USessionSubsystem::OnFindSessionsComplete);
 			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnJoinSessionComplete);
@@ -44,6 +47,12 @@ void USessionSubsystem::Deinitialize()
 
 void USessionSubsystem::CreateSession(int32 NumPublicConnections, bool bIsLANMatch, FString ServerName)
 {
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LegacySessionSubsystem] CreateSession ignored (disabled)."));
+		return;
+	}
+
 	if (!SessionInterface.IsValid())
 	{
 		OnCreateSessionCompleteEvent.Broadcast(false);
@@ -87,6 +96,12 @@ void USessionSubsystem::CreateSession(int32 NumPublicConnections, bool bIsLANMat
 
 void USessionSubsystem::FindSessions(int32 MaxSearchResults, bool bIsLANMatch)
 {
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LegacySessionSubsystem] FindSessions ignored (disabled)."));
+		return;
+	}
+
 	if (!SessionInterface.IsValid())
 	{
 		OnFindSessionsCompleteEvent.Broadcast(false);
@@ -116,6 +131,12 @@ void USessionSubsystem::FindSessions(int32 MaxSearchResults, bool bIsLANMatch)
 
 void USessionSubsystem::JoinSession(int32 SessionIndex)
 {
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LegacySessionSubsystem] JoinSession ignored (disabled)."));
+		return;
+	}
+
 	if (!SessionInterface.IsValid() || !LastSessionSearch.IsValid())
 	{
 		OnJoinSessionCompleteEvent.Broadcast(false);
@@ -146,6 +167,12 @@ void USessionSubsystem::JoinSession(int32 SessionIndex)
 
 void USessionSubsystem::DestroySession()
 {
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LegacySessionSubsystem] DestroySession ignored (disabled)."));
+		return;
+
+	}
 	if (!SessionInterface.IsValid())
 	{
 		OnDestroySessionCompleteEvent.Broadcast(false);
@@ -161,6 +188,12 @@ void USessionSubsystem::DestroySession()
 
 TArray<FString> USessionSubsystem::GetSessionSearchResults()
 {
+	if (!IsLegacyEnabled())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LegacySessionSubsystem] GetSessionSearchResults ignored (disabled)."));
+		return TArray<FString>();
+	}
+
 	TArray<FString> SessionNames;
 
 	if (!LastSessionSearch.IsValid())
