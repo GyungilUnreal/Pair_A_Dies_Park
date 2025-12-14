@@ -8,38 +8,48 @@ class UButton;
 class UTextBlock;
 class USteamSessionSubsystem;
 
+// Entry(í–‰)ì—ì„œ Join í´ë¦­ì„ MainMenuë¡œ ì „ë‹¬í•˜ê¸° ìœ„í•œ ë¸ë¦¬ê²Œì´íŠ¸
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEntryJoinClicked, int32, SessionIndex, const FString&, OwnerName);
+
 UCLASS()
 class USessionEntryWidget : public UUserWidget
 {
     GENERATED_BODY()
 
 public:
-    // ÃÊ±âÈ­ ÇÔ¼ö: C++¿¡¼­ »ı¼º ÈÄ ¹Ù·Î È£Ãâ
+    // ì´ˆê¸°í™” í•¨ìˆ˜: C++ì—ì„œ ìƒì„± í›„ ë°”ë¡œ í˜¸ì¶œ
     void InitEntry(USteamSessionSubsystem* InSubsystem, int32 InSessionIndex, const FString& InOwnerName);
+
+    // MainMenuWidgetê°€ ë°”ì¸ë”©í•´ì„œ StatusTextë¥¼ ë„ìš¸ ìˆ˜ ìˆê²Œ í•¨
+    UPROPERTY(BlueprintAssignable, Category = "Steam|Session")
+    FOnEntryJoinClicked OnEntryJoinClicked;
 
 protected:
     virtual void NativeConstruct() override;
 
-    // ºí·çÇÁ¸°Æ® µğÀÚÀÌ³Ê¿¡¼­ Button / TextBlock À» BindWidget À¸·Î ¿¬°á
+    // ë¸”ë£¨í”„ë¦°íŠ¸ ë””ìì´ë„ˆì—ì„œ Button / TextBlock ì„ BindWidget ìœ¼ë¡œ ì—°ê²°
     UPROPERTY(meta = (BindWidget))
     UButton* JoinButton;
 
     UPROPERTY(meta = (BindWidget))
     UTextBlock* SessionText;
 
-    // ¿¬°áµÈ Subsystem (JoinSession È£Ãâ¿ë)
+    // ì—°ê²°ëœ Subsystem (JoinSession í˜¸ì¶œìš©)
     UPROPERTY()
     USteamSessionSubsystem* Subsystem;
 
-    // ÀÌ Ç×¸ñÀÌ ³ªÅ¸³»´Â ¼¼¼Ç ÀÎµ¦½º
+    // ì´ í•­ëª©ì´ ë‚˜íƒ€ë‚´ëŠ” ì„¸ì…˜ ì¸ë±ìŠ¤
     int32 SessionIndex;
 
-    // ¹öÆ° Å¬¸¯ ÇÚµé·¯
+    // ë²„íŠ¼ í´ë¦­ í•¸ë“¤ëŸ¬
     UFUNCTION()
     void OnJoinButtonClicked();
 
 private:
     bool bJoinInProgress = false;
+
+    // ì•ˆë‚´ ë©”ì‹œì§€ì— ì‚¬ìš©í•  í˜¸ìŠ¤íŠ¸ ì´ë¦„ ìºì‹œ
+    FString CachedOwnerName;
 
     UFUNCTION()
     void HandleJoinFinished(int32 FinishedIndex, bool bSuccess);

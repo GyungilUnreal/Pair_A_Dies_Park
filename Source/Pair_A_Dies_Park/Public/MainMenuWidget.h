@@ -90,11 +90,22 @@ protected:
 	UFUNCTION()
 	void HandleSessionListUpdated();
 
+	// Subsystem의 OnSessionJoinFinished 델리게이트에 바인딩될 함수
+	UFUNCTION()
+	void HandleJoinFinished(int32 FinishedIndex, bool bSuccess);
+
+	// SessionEntryWidget의 Join 클릭을 받는 함수 (StatusText 안내 및 버튼 잠금)
+	UFUNCTION()
+	void HandleEntryJoinClicked(int32 SessionIndex, const FString& OwnerName);
+
 	// 실제로 패널(SessionListPanel)에 세션 항목들을 채우는 함수
 	void RebuildSessionList();
 
 	// 상태 메시지를 변경하는 헬퍼 함수
 	void SetStatusMessage(const FString& Message);
+
+	// Join 중 UI 잠금/해제 (버튼 비활성화 + 메시지)
+	void SetJoinUIBusy(bool bBusy, const FString& Message);
 
 	// 필터 버튼 핸들러
 	UFUNCTION()
@@ -102,6 +113,11 @@ protected:
 
 	UFUNCTION()
 	void OnFilterFriendsClicked();
+
+private:
+	// Join 진행 상태 (메뉴 Join 버튼/Entry Join 버튼 모두 공통)
+	bool bJoinInProgress = false;
+	int32 PendingJoinIndex = -1;
 
 public:
 	/* ========================= 블루프린트에서 호출할 함수들 ========================= */

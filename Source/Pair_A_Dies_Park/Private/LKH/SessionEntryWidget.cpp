@@ -9,13 +9,15 @@ void USessionEntryWidget::InitEntry(USteamSessionSubsystem* InSubsystem, int32 I
     Subsystem = InSubsystem;
     SessionIndex = InSessionIndex;
 
-    // À§Á¬ÀÌ ÀÌ¹Ì Construct µÈ »óÅÂ¶ó¸é ÅØ½ºÆ®¸¦ ¹Ù·Î °»½Å
+    CachedOwnerName = InOwnerName;
+
+    // ìœ„ì ¯ì´ ì´ë¯¸ Construct ëœ ìƒíƒœë¼ë©´ í…ìŠ¤íŠ¸ë¥¼ ë°”ë¡œ ê°±ì‹ 
     if (SessionText)
     {
         SessionText->SetText(FText::FromString(InOwnerName));
     }
 
-    // InitEntry ½ÃÁ¡¿¡ È®½ÇÈ÷ ¹ÙÀÎµù
+    // InitEntry ì‹œì ì— í™•ì‹¤ížˆ ë°”ì¸ë”©
     if (Subsystem)
     {
         Subsystem->OnSessionJoinFinished.RemoveDynamic(this, &USessionEntryWidget::HandleJoinFinished);
@@ -27,15 +29,16 @@ void USessionEntryWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    // ¹öÆ° µ¨¸®°ÔÀÌÆ® ¹ÙÀÎµù
+    // ë²„íŠ¼ ë¸ë¦¬ê²Œì´íŠ¸ ë°”ì¸ë”©
     if (JoinButton)
     {
         JoinButton->OnClicked.AddDynamic(this, &USessionEntryWidget::OnJoinButtonClicked);
     }
 
-    // Join °á°ú¸¦ ¹Þ¾Æ ¹öÆ° ´Ù½Ã ÄÑ±â
+    // Join ê²°ê³¼ë¥¼ ë°›ì•„ ë²„íŠ¼ ë‹¤ì‹œ ì¼œê¸°
     if (Subsystem)
     {
+        Subsystem->OnSessionJoinFinished.RemoveDynamic(this, &USessionEntryWidget::HandleJoinFinished);
         Subsystem->OnSessionJoinFinished.AddDynamic(this, &USessionEntryWidget::HandleJoinFinished);
     }
 }
@@ -56,6 +59,9 @@ void USessionEntryWidget::OnJoinButtonClicked()
         UE_LOG(LogTemp, Warning, TEXT("[SessionEntryWidget] Join suppressed (spam click). Index=%d"), SessionIndex);
         return;
     }
+
+    // MainMenuì— "Join ì‹œë„"ë¥¼ ì•Œë¦¼ (StatusText ì•ˆë‚´ìš©)
+    OnEntryJoinClicked.Broadcast(SessionIndex, CachedOwnerName);
 
     bJoinInProgress = true;
     JoinButton->SetIsEnabled(false);

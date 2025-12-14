@@ -26,6 +26,9 @@ void UMainMenuWidget::NativeConstruct()
     if (CachedSubsystem)
     {
         CachedSubsystem->OnSessionListUpdated.AddDynamic(this, &UMainMenuWidget::HandleSessionListUpdated);
+
+        // Join 완료 델리게이트 바인딩 (메뉴 Join/Entry Join 공통)
+        CachedSubsystem->OnSessionJoinFinished.AddDynamic(this, &UMainMenuWidget::HandleJoinFinished);
     }
 
     if (HostButton)
@@ -83,16 +86,30 @@ void UMainMenuWidget::OnRefreshButtonClicked()
 void UMainMenuWidget::OnJoinButtonClicked()
 {
     USteamSessionSubsystem* GI = GetSteamSessionSubsystem();
-    if (GI && SelectedSessionIndex >= 0)
-    {
-        GI->JoinSessionByIndex(SelectedSessionIndex);
-    }
+    if (!GI || SelectedSessionIndex < 0)
+        return;
+
+    if (bJoinInProgress)
+        return;
+
+    bJoinInProgress = true;
+    PendingJoinIndex = SelectedSessionIndex;
+
+    SetJoinUIBusy(true, TEXT("Joining session..."));
+
+    GI->JoinSessionByIndex(SelectedSessionIndex);
 }
 
 void UMainMenuWidget::HandleSessionListUpdated()
 {
     // 세션 검색 결과가 바뀌면 리스트를 다시 그림
     RebuildSessionList();
+
+    // Join 중에는 Find 갱신으로 StatusText가 지워지지 않도록 유지
+    if (bJoinInProgress)
+    {
+        return;
+    }
 
     USteamSessionSubsystem* GI = GetSteamSessionSubsystem();
     if (!GI)
@@ -146,11 +163,62 @@ void UMainMenuWidget::RebuildSessionList()
         // Subsystem, 인덱스, 표시용 이름 전달
         EntryWidget->InitEntry(GI, Index, OwnerName);
 
+        // Entry Join 클릭 시 MainMenu가 StatusText 안내/버튼 잠금을 수행
+        EntryWidget->OnEntryJoinClicked.AddDynamic(this, &UMainMenuWidget::HandleEntryJoinClicked);
+
         // 패널에 추가
         SessionListPanel->AddChild(EntryWidget);
     }
 
     SelectedSessionIndex = -1;
+}
+
+void UMainMenuWidget::HandleEntryJoinClicked(int32 SessionIndex, const FString& OwnerName)
+{
+    if (bJoinInProgress)
+        return;
+
+    bJoinInProgress = true;
+    PendingJoinIndex = SessionIndex;
+
+    const FString Msg = OwnerName.IsEmpty()
+        ? TEXT("Joining session...")
+        : FString::Printf(TEXT("Joining %s ..."), *OwnerName);
+
+    SetJoinUIBusy(true, Msg);
+}
+
+void UMainMenuWidget::HandleJoinFinished(int32 FinishedIndex, bool bSuccess)
+{
+    if (!bJoinInProgress)
+        return;
+
+    if (FinishedIndex != PendingJoinIndex)
+        return;
+
+    bJoinInProgress = false;
+    PendingJoinIndex = -1;
+
+    if (bSuccess)
+    {
+        // 성공하면 대개 곧바로 ClientTravel이 실행되므로 메시지는 깔끔하게 지움
+        SetJoinUIBusy(false, TEXT(""));
+    }
+    else
+    {
+        SetJoinUIBusy(false, TEXT("Join failed."));
+    }
+}
+
+void UMainMenuWidget::SetJoinUIBusy(bool bBusy, const FString& Message)
+{
+    if (JoinButton) JoinButton->SetIsEnabled(!bBusy);
+    if (RefreshButton) RefreshButton->SetIsEnabled(!bBusy);
+    if (HostButton) HostButton->SetIsEnabled(!bBusy);
+    if (FilterAllButton) FilterAllButton->SetIsEnabled(!bBusy);
+    if (FilterFriendsButton) FilterFriendsButton->SetIsEnabled(!bBusy);
+
+    SetStatusMessage(Message);
 }
 
 void UMainMenuWidget::SetStatusMessage(const FString& Message)
