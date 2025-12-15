@@ -12,9 +12,10 @@ public class Pair_A_Dies_Park : ModuleRules
 			"GameplayAbilities", "GameplayTags", "GameplayTasks", 
 			"UMG", "SlateCore",
 			"OnlineSubsystem", "OnlineSubsystemUtils",
-            "LevelSequence", "MovieScene"
+            "LevelSequence", "MovieScene", "Steamworks"
         });
 
         DynamicallyLoadedModuleNames.Add("OnlineSubsystemNull");
+        DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
     }
 }
