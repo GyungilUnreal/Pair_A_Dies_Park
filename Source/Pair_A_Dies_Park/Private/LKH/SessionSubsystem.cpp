@@ -20,10 +20,10 @@ void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		if (SessionInterface.IsValid())
 		{
 			// 델리게이트 바인딩
-			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnCreateSessionComplete);
-			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &USessionSubsystem::OnFindSessionsComplete);
-			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnJoinSessionComplete);
-			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnDestroySessionComplete);
+			//SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnCreateSessionComplete);
+			//SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &USessionSubsystem::OnFindSessionsComplete);
+			//SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnJoinSessionComplete);
+			//SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &USessionSubsystem::OnDestroySessionComplete);
 		}
 	}
 }
@@ -33,10 +33,10 @@ void USessionSubsystem::Deinitialize()
 	// 델리게이트 해제
 	if (SessionInterface.IsValid())
 	{
-		SessionInterface->ClearOnCreateSessionCompleteDelegates(this);
-		SessionInterface->ClearOnFindSessionsCompleteDelegates(this);
-		SessionInterface->ClearOnJoinSessionCompleteDelegates(this);
-		SessionInterface->ClearOnDestroySessionCompleteDelegates(this);
+		//SessionInterface->ClearOnCreateSessionCompleteDelegates(this);
+		//SessionInterface->ClearOnFindSessionsCompleteDelegates(this);
+		//SessionInterface->ClearOnJoinSessionCompleteDelegates(this);
+		//SessionInterface->ClearOnDestroySessionCompleteDelegates(this);
 	}
 
 	Super::Deinitialize();
