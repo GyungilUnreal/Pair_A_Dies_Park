@@ -136,7 +136,7 @@ void USteamSessionSubsystem::HandleCreateSessionComplete(FName SessionName, bool
 
     bPendingStartSessionAfterTravel = true;
 
-    const FString TravelURL = TEXT("/Game/Collaborators/LKH/Split/Steam/SteamLobby'?listen");
+    const FString TravelURL = TEXT("/Game/Collaborators/LKH/Split/Steam/SteamLobby?listen");
     UGameplayStatics::OpenLevel(GetWorld(), FName(*TravelURL), true);
 }
 
