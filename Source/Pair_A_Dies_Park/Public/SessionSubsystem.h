@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
-#include "OnlineSessionSettings.h"
 #include "SessionSubsystem.generated.h"
+
+class USteamSessionSubsystem;
 
 // 세션 생성 결과를 알리는 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSessionCreateComplete, bool, bWasSuccessful);
@@ -16,7 +16,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSessionJoinComplete, bool, bWasSucc
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSessionDestroyComplete, bool, bWasSuccessful);
 
 /**
- * 온라인 세션을 생성, 검색, 참가, 삭제하는 GameInstanceSubsystem
+ * (레거시) 온라인 세션을 생성, 검색, 참가, 삭제하는 GameInstanceSubsystem
+ * - 이제 모든 실제 로직은 USteamSessionSubsystem에서 관리
+ * - 이 클래스는 단순 포워더(호환 레이어)
  */
 UCLASS()
 class USessionSubsystem : public UGameInstanceSubsystem
@@ -30,7 +32,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	// 세션 생성
+	// 세션 생성(=Host)
 	UFUNCTION(BlueprintCallable, Category = "Session")
 	void CreateSession(int32 NumPublicConnections, bool bIsLANMatch, FString ServerName);
 
@@ -50,7 +52,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Session")
 	TArray<FString> GetSessionSearchResults();
 
-	// 델리게이트들
+	// 델리게이트들(레거시)
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FSessionCreateComplete OnCreateSessionCompleteEvent;
 
@@ -63,26 +65,22 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FSessionDestroyComplete OnDestroySessionCompleteEvent;
 
-protected:
-	// 세션 인터페이스 콜백 함수들
-	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
-	void OnFindSessionsComplete(bool bWasSuccessful);
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
-
 private:
-	// 온라인 세션 인터페이스
-	IOnlineSessionPtr SessionInterface;
+	// 실제 구현 서브시스템
+	TWeakObjectPtr<USteamSessionSubsystem> SteamSubsystem;
 
-	// 세션 검색 결과
-	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
+	USteamSessionSubsystem* ResolveSteamSubsystem() const;
 
-	// 델리게이트 핸들들
-	FDelegateHandle CreateSessionCompleteHandle;
-	FDelegateHandle FindSessionsCompleteHandle;
-	FDelegateHandle JoinSessionCompleteHandle;
-	FDelegateHandle DestroySessionCompleteHandle;
+	// SteamSubsystem 델리게이트 브리지
+	UFUNCTION()
+	void HandleHostComplete(bool bWasSuccessful);
 
-	// 마지막 세션 설정 저장 (재시도용)
-	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
+	UFUNCTION()
+	void HandleFindComplete(bool bWasSuccessful);
+
+	UFUNCTION()
+	void HandleJoinComplete(bool bWasSuccessful);
+
+	UFUNCTION()
+	void HandleDestroyComplete(bool bWasSuccessful);
 };

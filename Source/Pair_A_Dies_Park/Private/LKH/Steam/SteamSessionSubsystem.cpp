@@ -1,13 +1,14 @@
 #include "SteamSessionSubsystem.h"
 
 #include "OnlineSubsystem.h"
-#include "OnlineSessionSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Online/OnlineSessionNames.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
-#include "HAL/PlatformProcess.h"
+#include "Engine/Texture2D.h"
+
+const FName USteamSessionSubsystem::KEY_SERVER_NAME(TEXT("SERVER_NAME"));
 
 USteamSessionSubsystem::USteamSessionSubsystem()
 {
@@ -110,6 +111,45 @@ const ULocalPlayer* USteamSessionSubsystem::GetFirstLocalPlayer() const
 }
 
 /* =====================================================================================
+ *  Public API
+ * ===================================================================================== */
+
+void USteamSessionSubsystem::HostSession(int32 NumPublicConnections, bool bIsLAN)
+{
+	// 기본 ServerName은 Steam 닉네임
+	HostSessionWithServerName(NumPublicConnections, bIsLAN, GetSteamNickname());
+}
+
+void USteamSessionSubsystem::HostSessionWithServerName(int32 NumPublicConnections, bool bIsLAN, const FString& ServerName)
+{
+	PendingHostPublicConnections = NumPublicConnections;
+	bPendingHostIsLAN = bIsLAN;
+	PendingServerName = ServerName;
+	PendingSessionAction = EPendingSessionAction::Host;
+	DestroySessionIfExists();
+}
+
+void USteamSessionSubsystem::FindSessions(bool bIsLAN)
+{
+	FindSessionsWithMaxResults(bIsLAN, 200);
+}
+
+void USteamSessionSubsystem::FindSessionsWithMaxResults(bool bIsLAN, int32 MaxSearchResults)
+{
+	bPendingFindIsLAN = bIsLAN;
+	PendingMaxSearchResults = FMath::Clamp(MaxSearchResults, 1, 5000);
+	PendingSessionAction = EPendingSessionAction::Find;
+	DestroySessionIfExists();
+}
+
+void USteamSessionSubsystem::JoinSessionByIndex(int32 SessionIndex)
+{
+	PendingJoinIndex = SessionIndex;
+	PendingSessionAction = EPendingSessionAction::Join;
+	DestroySessionIfExists();
+}
+
+/* =====================================================================================
  *  Session Destroy (safe)
  * ===================================================================================== */
 
@@ -118,12 +158,14 @@ void USteamSessionSubsystem::DestroySessionIfExists()
 	if (!SessionInterface.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DestroySessionIfExists 실패: SessionInterface 가 유효하지 않음"));
+		OnDestroySessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
 	FNamedOnlineSession* Existing = SessionInterface->GetNamedSession(GameSessionName);
 	if (!Existing)
 	{
+		// 실제로 지울 게 없으면 성공으로 간주하고 다음 동작 진행
 		OnDestroySessionComplete(GameSessionName, true);
 		return;
 	}
@@ -144,6 +186,20 @@ void USteamSessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bW
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("OnDestroySessionComplete: %s, Success=%d"), *SessionName.ToString(), bWasSuccessful ? 1 : 0);
+	OnDestroySessionCompleteEvent.Broadcast(bWasSuccessful);
+
+	// Destroy 단독 호출 시(=Pending None) 이동 옵션이 있으면 처리
+	if (PendingSessionAction == EPendingSessionAction::None && bWasSuccessful)
+	{
+		if (!DestroyTravelMapPath.IsEmpty())
+		{
+			if (UWorld* World = GetWorldSafe())
+			{
+				UGameplayStatics::OpenLevel(World, FName(*DestroyTravelMapPath), true);
+			}
+		}
+		return;
+	}
 
 	switch (PendingSessionAction)
 	{
@@ -172,32 +228,6 @@ void USteamSessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bW
 }
 
 /* =====================================================================================
- *  Public API: Host/Find/Join (always destroy first if needed)
- * ===================================================================================== */
-
-void USteamSessionSubsystem::HostSession(int32 NumPublicConnections, bool bIsLAN)
-{
-	PendingHostPublicConnections = NumPublicConnections;
-	bPendingHostIsLAN = bIsLAN;
-	PendingSessionAction = EPendingSessionAction::Host;
-	DestroySessionIfExists();
-}
-
-void USteamSessionSubsystem::FindSessions(bool bIsLAN)
-{
-	bPendingFindIsLAN = bIsLAN;
-	PendingSessionAction = EPendingSessionAction::Find;
-	DestroySessionIfExists();
-}
-
-void USteamSessionSubsystem::JoinSessionByIndex(int32 SessionIndex)
-{
-	PendingJoinIndex = SessionIndex;
-	PendingSessionAction = EPendingSessionAction::Join;
-	DestroySessionIfExists();
-}
-
-/* =====================================================================================
  *  Internal implementations
  * ===================================================================================== */
 
@@ -206,6 +236,7 @@ void USteamSessionSubsystem::DoHostSession(int32 NumPublicConnections, bool bIsL
 	if (!SessionInterface.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("HostSession 실패: SessionInterface 가 유효하지 않음"));
+		OnHostSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -224,10 +255,14 @@ void USteamSessionSubsystem::DoHostSession(int32 NumPublicConnections, bool bIsL
 	SessionSettings.bAllowJoinViaPresence = true;
 	SessionSettings.BuildUniqueId = 1;
 
+	// 커스텀 서버 이름
+	SessionSettings.Set(KEY_SERVER_NAME, PendingServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
 	const ULocalPlayer* LocalPlayer = GetFirstLocalPlayer();
 	if (!LocalPlayer)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("HostSession 실패: LocalPlayer 없음"));
+		OnHostSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -235,11 +270,16 @@ void USteamSessionSubsystem::DoHostSession(int32 NumPublicConnections, bool bIsL
 	if (!UserId.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("HostSession 실패: UserId 없음"));
+		OnHostSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("세션 생성 시도: %s"), *GameSessionName.ToString());
-	SessionInterface->CreateSession(*UserId, GameSessionName, SessionSettings);
+	UE_LOG(LogTemp, Log, TEXT("세션 생성 시도: %s / ServerName=%s"), *GameSessionName.ToString(), *PendingServerName);
+	const bool bStarted = SessionInterface->CreateSession(*UserId, GameSessionName, SessionSettings);
+	if (!bStarted)
+	{
+		OnHostSessionCompleteEvent.Broadcast(false);
+	}
 }
 
 void USteamSessionSubsystem::DoFindSessions(bool bIsLAN)
@@ -247,6 +287,7 @@ void USteamSessionSubsystem::DoFindSessions(bool bIsLAN)
 	if (!SessionInterface.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FindSessions 실패: SessionInterface 가 유효하지 않음"));
+		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -254,6 +295,7 @@ void USteamSessionSubsystem::DoFindSessions(bool bIsLAN)
 	if (!LocalPlayer)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FindSessions 실패: LocalPlayer 없음"));
+		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -261,12 +303,13 @@ void USteamSessionSubsystem::DoFindSessions(bool bIsLAN)
 	if (!UserId.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FindSessions 실패: UserId 없음"));
+		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
 
 	LastSessionSearch = MakeShareable(new FOnlineSessionSearch());
 	LastSessionSearch->bIsLanQuery = bIsLAN;
-	LastSessionSearch->MaxSearchResults = 200;
+	LastSessionSearch->MaxSearchResults = PendingMaxSearchResults;
 
 	LastSessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
 
@@ -274,8 +317,12 @@ void USteamSessionSubsystem::DoFindSessions(bool bIsLAN)
 		LastSessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
-		UE_LOG(LogTemp, Log, TEXT("세션 검색 시작 (LAN=%d, Lobbies=1, Presence=1)"), bIsLAN ? 1 : 0);
-	SessionInterface->FindSessions(*UserId, LastSessionSearch.ToSharedRef());
+		UE_LOG(LogTemp, Log, TEXT("세션 검색 시작 (LAN=%d, Max=%d, Lobbies=1, Presence=1)"), bIsLAN ? 1 : 0, PendingMaxSearchResults);
+	const bool bStarted = SessionInterface->FindSessions(*UserId, LastSessionSearch.ToSharedRef());
+	if (!bStarted)
+	{
+		OnFindSessionsCompleteEvent.Broadcast(false);
+	}
 }
 
 void USteamSessionSubsystem::DoJoinSessionByIndex(int32 SessionIndex)
@@ -283,12 +330,14 @@ void USteamSessionSubsystem::DoJoinSessionByIndex(int32 SessionIndex)
 	if (!SessionInterface.IsValid() || !LastSessionSearch.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("JoinSession 실패: SessionInterface 또는 LastSessionSearch 가 유효하지 않음"));
+		OnJoinSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
 	if (!LastSessionSearch->SearchResults.IsValidIndex(SessionIndex))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("JoinSession 실패: 잘못된 인덱스 %d"), SessionIndex);
+		OnJoinSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -296,6 +345,7 @@ void USteamSessionSubsystem::DoJoinSessionByIndex(int32 SessionIndex)
 	if (!LocalPlayer)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("JoinSession 실패: LocalPlayer 없음"));
+		OnJoinSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -303,6 +353,7 @@ void USteamSessionSubsystem::DoJoinSessionByIndex(int32 SessionIndex)
 	if (!UserId.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("JoinSession 실패: UserId 없음"));
+		OnJoinSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -317,7 +368,11 @@ void USteamSessionSubsystem::DoJoinSessionByIndex(int32 SessionIndex)
 	UE_LOG(LogTemp, Log, TEXT("세션 참가 시도: Index %d, Owner=%s, BuildId=0x%08x"),
 		SessionIndex, *OwnerName, BuildId);
 
-	SessionInterface->JoinSession(*UserId, GameSessionName, ResultToJoin);
+	const bool bStarted = SessionInterface->JoinSession(*UserId, GameSessionName, ResultToJoin);
+	if (!bStarted)
+	{
+		OnJoinSessionCompleteEvent.Broadcast(false);
+	}
 }
 
 /* =====================================================================================
@@ -329,15 +384,19 @@ void USteamSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool bWa
 	UE_LOG(LogTemp, Log, TEXT("OnCreateSessionComplete: %s, 성공 여부: %s"),
 		*SessionName.ToString(), bWasSuccessful ? TEXT("true") : TEXT("false"));
 
+	OnHostSessionCompleteEvent.Broadcast(bWasSuccessful);
+
 	if (!bWasSuccessful)
 	{
 		return;
 	}
 
-	if (UWorld* World = GetWorldSafe())
+	if (!HostTravelMapPath.IsEmpty())
 	{
-		const FString MapPath = TEXT("/Game/Variant_Combat/Lvl_Combat?listen");
-		UGameplayStatics::OpenLevel(World, FName(*MapPath), true);
+		if (UWorld* World = GetWorldSafe())
+		{
+			UGameplayStatics::OpenLevel(World, FName(*HostTravelMapPath), true);
+		}
 	}
 }
 
@@ -347,6 +406,7 @@ void USteamSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 
 	if (!bWasSuccessful || !LastSessionSearch.IsValid())
 	{
+		OnFindSessionsCompleteEvent.Broadcast(false);
 		return;
 	}
 
@@ -360,14 +420,19 @@ void USteamSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("찾은 세션 개수: %d"), LastSessionSearch->SearchResults.Num());
+
 	OnSessionListUpdated.Broadcast();
+	OnFindSessionsCompleteEvent.Broadcast(true);
 }
 
 void USteamSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
 	UE_LOG(LogTemp, Log, TEXT("OnJoinSessionComplete: %s, 결과: %d"), *SessionName.ToString(), (int32)Result);
 
-	if (!SessionInterface.IsValid())
+	const bool bOk = (Result == EOnJoinSessionCompleteResult::Success);
+	OnJoinSessionCompleteEvent.Broadcast(bOk);
+
+	if (!bOk || !SessionInterface.IsValid())
 	{
 		return;
 	}
@@ -402,6 +467,38 @@ FString USteamSessionSubsystem::GetSessionOwnerName(int32 SessionIndex) const
 		return TEXT("");
 	}
 	return LastSessionSearch->SearchResults[SessionIndex].Session.OwningUserName;
+}
+
+TArray<FString> USteamSessionSubsystem::GetSessionSearchResults() const
+{
+	TArray<FString> Out;
+	if (!LastSessionSearch.IsValid())
+	{
+		return Out;
+	}
+
+	for (const FOnlineSessionSearchResult& Result : LastSessionSearch->SearchResults)
+	{
+		FString ServerName;
+		Result.Session.SessionSettings.Get(KEY_SERVER_NAME, ServerName);
+
+		if (ServerName.IsEmpty())
+		{
+			ServerName = Result.Session.OwningUserName;
+			if (ServerName.IsEmpty())
+			{
+				ServerName = TEXT("Unnamed Session");
+			}
+		}
+
+		const int32 MaxPub = Result.Session.SessionSettings.NumPublicConnections;
+		const int32 OpenPub = Result.Session.NumOpenPublicConnections;
+		const int32 UsedPub = FMath::Max(0, MaxPub - OpenPub);
+
+		Out.Add(FString::Printf(TEXT("%s (%d/%d)"), *ServerName, UsedPub, MaxPub));
+	}
+
+	return Out;
 }
 
 FString USteamSessionSubsystem::GetSteamNickname() const
